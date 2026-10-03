@@ -1,0 +1,8 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {encodeWave} from '../src/voice-recorder.js'
+test('microphone PCM produces exact canonical little-endian WAV',()=>{const wav=encodeWave(new Float32Array(4800).fill(.5),48000),v=new DataView(wav.buffer);assert.equal(wav.length,3244);assert.equal(new TextDecoder().decode(wav.slice(0,4)),'RIFF');assert.equal(v.getUint32(4,true),3236);assert.equal(v.getUint32(24,true),16000);assert.equal(v.getUint32(28,true),32000);assert.equal(v.getUint16(22,true),1);assert.equal(v.getUint16(34,true),16);assert.equal(v.getUint32(40,true),3200);assert.equal(v.getInt16(44,true),16384)})
+test('fractional 44.1kHz conversion is bounded and finite',()=>{const wav=encodeWave(new Float32Array(44100).fill(-.5),44100);assert.equal(wav.length,32044);assert.equal(new DataView(wav.buffer).getInt16(wav.length-2,true),-16384)})
+test('six seconds is the hard capture body ceiling',()=>{assert.equal(encodeWave(new Float32Array(288000),48000).length,192044);assert.throws(()=>encodeWave(new Float32Array(288001),48000),/AUDIO_TOO_LONG/)})
+test('too-short nonfinite and unsupported-rate input never becomes an upload',()=>{assert.throws(()=>encodeWave(new Float32Array(100),48000),/AUDIO_TOO_SHORT/);assert.throws(()=>encodeWave(new Float32Array(4800).fill(NaN),48000),/INVALID_PCM/);assert.throws(()=>encodeWave(new Float32Array(4800),8000),/INVALID_PCM/);assert.throws(()=>encodeWave([],48000),/INVALID_PCM/)})
+test('out-of-range samples clip safely without integer wrapping',()=>{const samples=new Float32Array(1600).fill(2);samples[0]=-2;const bytes=encodeWave(samples,16000),view=new DataView(bytes.buffer);assert.equal(view.getInt16(44,true),-32768);assert.equal(view.getInt16(46,true),32767)})

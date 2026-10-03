@@ -33,5 +33,7 @@
     "speech-worker/install_runtime.py": "5302581c12d2811b04669fb43be11795c7623fd83bb78d2f1ad8df1c094226fd"
   },
   "syntheticWaveSha256": "17d28d90ba0f0236cde735bdb1fd78bdc05fd408fdc19600f892365aa6684821",
-  "note": "Source test-profile HTTP plus an explicit local model worker, not a packaged production identity or device test. No zero-egress claim."
+  "note": "Source test-profile HTTP plus an explicit local model worker, not a packaged production identity or device test. No zero-egress claim.",
+  "sourceCommit": "e69c1a8848d920d802b6c97f33fb18dc869c3e11",
+  "scope": "Historical B12 runtime snapshot; sourceSha256 binds that tested snapshot, not later modified files."
 }

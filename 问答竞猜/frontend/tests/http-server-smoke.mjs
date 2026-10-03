@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict'
 import {randomUUID} from 'node:crypto'
 import {createQuizApi} from '../src/server-api.js'
-import {validateSnapshot} from '../src/server-state.js'
+import {validateSnapshot,validateVoiceCandidate} from '../src/server-state.js'
+import {encodeWave} from '../src/voice-recorder.js'
 const origin=process.argv[2]
 assert.match(origin,/^http:\/\/127\.0\.0\.1:\d+$/)
 const api=createQuizApi({base:origin+'/api/quiz',fetcher:(url,options)=>fetch(url,{...options,headers:{...options.headers,'X-Test-Actor':'owner'}})})
@@ -12,6 +13,7 @@ assert.equal((await api.create('en',creation)).sessionId,s.sessionId)
 for(let i=0;i<5;i++){
  s=validateSnapshot(await api.ready(s.sessionId,s.roundId))
  await new Promise(r=>setTimeout(r,Math.max(0,s.opensAt-s.serverNow)+70))
+ if(i===0){const caps=await api.capabilities();assert.equal(caps.voiceCandidateConfigured,true);const current=validateSnapshot(await api.current(s.sessionId));const voice=validateVoiceCandidate(await api.voice(s.sessionId,s.roundId,encodeWave(new Float32Array(4800).fill(.1),48000)),current,current.serverNow);assert.equal(voice.choice,2);assert.equal(voice.requiresConfirmation,true);assert.equal((await api.current(s.sessionId)).score,0)} // Test-only recognizer returns C; no microphone/model accuracy claim.
  const key='answer-'+randomUUID();const a=await api.answer(s.sessionId,s.roundId,2,key) // Synthetic test bank: all C, not real content.
  validateSnapshot(a.session);assert.equal(a.accepted,true);assert.equal(a.session.phase,'REVEALING');assert.equal(a.result.correct,2)
  const replay=await api.answer(s.sessionId,s.roundId,2,key);assert.deepEqual(replay.result,a.result)

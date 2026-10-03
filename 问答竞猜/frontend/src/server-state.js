@@ -14,3 +14,9 @@ export function validateSnapshot(s){
 }
 export function isNewer(current,next){if(!current)return true;if(current.sessionId!==next.sessionId)return false;return next.revision>current.revision||(next.revision===current.revision&&next.serverNow>=current.serverNow)}
 export function commandResolved(command,s){if(!command||command.sessionId!==s.sessionId)return false;if(['ABANDONED','FINISHED'].includes(s.phase))return true;if(command.roundId&&command.roundId!==s.roundId)return true;if(command.kind==='answer')return s.phase==='REVEALING';if(command.kind==='ready')return s.phase!=='LOADING';if(command.kind==='fifty')return s.lifelineUsed;return false}
+
+export function validateVoiceCandidate(value,session,now){
+ const keys=['sessionId','roundId','choice','transcript','expiresAt','serverNow','requiresConfirmation']
+ if(!value||Object.keys(value).length!==keys.length||keys.some(k=>!Object.hasOwn(value,k))||value.sessionId!==session?.sessionId||value.roundId!==session?.roundId||!['READING','ANSWERING'].includes(session.phase)||value.requiresConfirmation!==true||value.expiresAt!==session.deadline||!Number.isSafeInteger(value.serverNow)||value.serverNow<session.opensAt||value.serverNow>=value.expiresAt||now>=value.expiresAt||typeof value.transcript!=='string'||value.transcript.length>160||/[\u0000-\u001f\u007f-\u009f]/.test(value.transcript)||(value.choice!==null&&(!Number.isInteger(value.choice)||value.choice<0||value.choice>3||session.eliminated.includes(value.choice))))throw new QuizApiError('INVALID_VOICE_CANDIDATE',502)
+ return Object.freeze({...value})
+}
