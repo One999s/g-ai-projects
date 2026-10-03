@@ -5,3 +5,15 @@ AI中台与Quiz使用同一个明确选择的逻辑MySQL库，但不意味着已
 Quiz只拥有六张quiz_*表。V001是从AI中台远端fixture恢复的原始文件，SHA256 9129c52f44988c69bc3f7f3e7524b249c8cceeb912950160cd06b989491883e7。它不是原身份DDL，不创建/修改用户、sites、team或钱包表。
 
 部署迁移由独立owner串行执行，统一锁shared_apps_schema_migration，独立ai_hub_schema_history/quiz_schema_history。禁止运行时DDL、自动baseline/clean/repair。真实DDL未知前不添加身份FK。正式连接工厂、URL白名单与首连前保护将在数据库实现批次重测，而非声称旧版本保护已经存在。
+
+## B05 重建实现更新
+
+shared-db显式连接由受控懒加载Hikari工厂提供，只消费SHARED_DATABASE_URL、QUIZ_DATABASE_USER/PASSWORD及有界QUIZ_DB_POOL_SIZE。未使用任意@ConfigurationProperties绑定；拒绝额外datasource/JNDI、SQL hook、catalog/credential覆盖。URL仅允许单MySQL主机/库及白名单参数，必须sslMode=REQUIRED/VERIFY_CA/VERIFY_IDENTITY，生产应核验实际CA/主机名后使用VERIFY_IDENTITY。DDL自建库、interceptor、local infile、明文凭据和弱TLS参数均拒绝。
+
+应用入口明确排除DataSource、SQL initialization及Flyway自动配置；因此即使有人更改SQL-init开关，框架也不会替运行账号执行建表。shared-db还在创建bean前校验配置，连接前复核最终Hikari设置，首连SELECT DATABASE检查实际库名。默认profile没有数据库连接。
+
+独立迁移owner先核对真实DDL、现有history和表ownership，在同一个连接持有shared_apps_schema_migration锁，分别操作ai_hub_schema_history/quiz_schema_history，禁止混扫两套V001。只有目标应用命名空间确实为空、用户授权目标明确时才能在离线审核流程初始化；现有历史/旧表不自动收编。MySQL DDL非事务回滚，失败后先审阅，不自动drop或repair。运行账号不写history；当前history/checksum验证仍属离线流程，并未实现生产迁移CLI。
+
+新的state_json是schemaVersion=2信封。旧无版本/不兼容会话一律503拒绝并保留原字节，不转换、不删除、不挪用旧成绩。V001物理schema未变；这不是对原生产数据兼容性的宣称。上线前应单独审计历史会话/题包版本及迁移策略。
+
+数据库权限见quiz-runtime-grants.sql.template。运行账号只访问quiz业务表，不读原身份、AI中台、团队或钱包表。部署说明只是模板，未实际创建生产账户或执行GRANT。

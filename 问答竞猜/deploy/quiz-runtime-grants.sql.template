@@ -1,0 +1,12 @@
+-- REVIEW TEMPLATE ONLY. Use an otherwise unprivileged, separately provisioned account.
+-- The schema and account placeholders must be replaced by the authorized deployment owner.
+-- Existing broader grants are not revoked by this template; inspect SHOW GRANTS first.
+GRANT SELECT ON `REVIEWED_SCHEMA`.`quiz_question_packs` TO 'REVIEWED_QUIZ_USER'@'REVIEWED_HOST';
+GRANT SELECT ON `REVIEWED_SCHEMA`.`quiz_question_audit` TO 'REVIEWED_QUIZ_USER'@'REVIEWED_HOST';
+GRANT SELECT, INSERT, UPDATE ON `REVIEWED_SCHEMA`.`quiz_sessions` TO 'REVIEWED_QUIZ_USER'@'REVIEWED_HOST';
+GRANT SELECT, INSERT ON `REVIEWED_SCHEMA`.`quiz_scores` TO 'REVIEWED_QUIZ_USER'@'REVIEWED_HOST';
+GRANT SELECT, INSERT, UPDATE ON `REVIEWED_SCHEMA`.`quiz_progress` TO 'REVIEWED_QUIZ_USER'@'REVIEWED_HOST';
+GRANT INSERT ON `REVIEWED_SCHEMA`.`quiz_outbox` TO 'REVIEWED_QUIZ_USER'@'REVIEWED_HOST';
+-- No identity/team/wallet/AI hub/history permissions. No DELETE, DDL or grant option.
+-- History validation is currently an offline migration-owner responsibility.
+-- Content approval/import and future outbox delivery require separate explicitly reviewed roles.

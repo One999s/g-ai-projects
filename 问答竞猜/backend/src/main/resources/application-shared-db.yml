@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: ${SHARED_DATABASE_URL}
+    username: ${QUIZ_DATABASE_USER}
+    password: ${QUIZ_DATABASE_PASSWORD}
+  sql:
+    init:
+      mode: never
+  flyway:
+    enabled: false
+    table: quiz_schema_history
+    baseline-on-migrate: false
+    clean-disabled: true

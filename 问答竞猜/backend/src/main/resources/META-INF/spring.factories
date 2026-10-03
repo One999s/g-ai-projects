@@ -1,0 +1,1 @@
+org.springframework.context.ApplicationContextInitializer=com.gaiprojects.quiz.database.SharedDatabaseInitializer
