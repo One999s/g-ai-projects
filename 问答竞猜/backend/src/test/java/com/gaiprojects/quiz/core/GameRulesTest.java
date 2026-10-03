@@ -206,4 +206,18 @@ class GameRulesTest {
     rules.ready(s, round(), now + 10000);
     assertEquals(deadline, s.deadline);
   }
+
+  @Test
+  void readyCannotBeDelayedIndefinitelyAfterQuestionDisclosure() {
+    var error = assertThrows(RuleException.class, () -> rules.ready(s, round(), s.loadingDeadline));
+    assertEquals("READY_DEADLINE_PASSED", error.code);
+    assertEquals("ABANDONED", s.phase);
+  }
+
+  @Test
+  void passiveReconnectAlsoClosesAnExpiredLoadingWindow() {
+    rules.tick(s, s.loadingDeadline);
+    assertEquals("ABANDONED", s.phase);
+    assertTrue(s.results.isEmpty());
+  }
 }

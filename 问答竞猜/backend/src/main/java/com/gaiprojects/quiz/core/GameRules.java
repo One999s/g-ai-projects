@@ -34,6 +34,7 @@ public final class GameRules {
     s.roundIds = selected.stream().map(q -> UUID.randomUUID().toString()).toList();
     s.createdAt = now;
     s.expiresAt = now + MAX_LIFETIME_MS;
+    s.loadingDeadline = now + 15000;
     return s;
   }
 
@@ -61,6 +62,11 @@ public final class GameRules {
     active(s, now);
     round(s, id);
     if (!s.phase.equals("LOADING")) return;
+    if (now >= s.loadingDeadline) {
+      s.phase = "ABANDONED";
+      s.revision++;
+      throw new RuleException("READY_DEADLINE_PASSED", 409);
+    }
     s.opensAt = now + s.questions.get(s.index).readingMillis();
     s.deadline = s.opensAt + ANSWER_MS;
     s.phase = "READING";
@@ -69,7 +75,7 @@ public final class GameRules {
 
   public void tick(GameSession s, long now) {
     if (Set.of("FINISHED", "ABANDONED").contains(s.phase) || s.results.size() == 5) return;
-    if (now >= s.expiresAt) {
+    if (now >= s.expiresAt || (s.phase.equals("LOADING") && now >= s.loadingDeadline)) {
       s.phase = "ABANDONED";
       s.revision++;
       return;
@@ -154,6 +160,7 @@ public final class GameRules {
       s.phase = "LOADING";
       s.opensAt = 0;
       s.deadline = 0;
+      s.loadingDeadline = now + 15000;
       s.eliminated.clear();
     }
     s.revision++;
@@ -176,10 +183,12 @@ public final class GameRules {
         s.roundIds.get(s.index),
         s.index + 1,
         s.phase,
+        s.locale,
         s.revision,
         now,
         s.opensAt,
         s.deadline,
+        s.loadingDeadline,
         s.score,
         s.streak,
         s.lifelineUsed,
@@ -198,10 +207,12 @@ public final class GameRules {
       String roundId,
       int roundNumber,
       String phase,
+      String locale,
       long revision,
       long serverNow,
       long opensAt,
       long deadline,
+      long loadingDeadline,
       int score,
       int streak,
       boolean lifelineUsed,

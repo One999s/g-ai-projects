@@ -56,3 +56,12 @@
 - 只读返回5题不可变快照，没有自动审批、演示题回退或正式音频声明；题包选择尚未接入权威HTTP开局流程
 - 最终本地96发现=61通过+35实MySQL opt-in跳过，零失败/错误；新增20条内容门槛H2测试。CI专门作业将执行全部35条真实MySQL合同，含20条内容门槛及最小账号读取空题库
 - 完整剩余上线链路见REMAINING-LAUNCH-PATH.md，范围收敛于HTTP、默认拒绝认证边界、Redis、server前端、内容音频和环境验收
+
+## B07 · 权威HTTP与实际源码客户端链路
+- 会话API覆盖create/current/ready/answer/next/50:50/abandon/progress/archive，统一脱敏envelope，不接客户端分数、时间或身份
+- 开局重放/题包选择/插入同一外层事务；原题包退役后原key仍可重放。行锁后及提交前授权复验，最后复验失败回滚
+- LOADING最多15秒，避免无限延迟ready；会话信封升级3，旧版本保留原字节且不自动纳管，V001无变化
+- 新请求边界：鉴权和配额先于正文，读取后复验、16KiB及规范路由/Origin/JSON类型限制，结构化错误与请求ID。缺原认证或分布式配额默认拒绝
+- 同一server-api.js源码经真实loopback HTTP→Spring→JDBC/H2完成5题750分、重复答题、进度和归档；合成身份/配额/内容仅src/test+test profile，不进入生产JAR
+- 最终本地后端116发现=76通过+40实MySQL opt-in跳过；前端20 Node+11 DOM=31通过、build通过。单JVM限堆，尚待本提交对应远端40条MySQL CI
+- 增加loading截止后发现可空deadline装箱分支错误，已修复并全量重跑；不保留失败实现为本批交付

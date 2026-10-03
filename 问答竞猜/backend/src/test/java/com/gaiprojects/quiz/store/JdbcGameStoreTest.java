@@ -319,4 +319,102 @@ class JdbcGameStoreTest {
     assertThrows(RuleException.class, () -> store.archive(owner, 101));
     assertThrows(RuleException.class, () -> store.archive(owner, 0));
   }
+
+  @Test
+  void concurrentAtomicCreationReturnsOneSession() throws Exception {
+    var pool = Executors.newFixedThreadPool(4);
+    try {
+      var calls = new ArrayList<Callable<String>>();
+      for (int i = 0; i < 12; i++)
+        calls.add(
+            () ->
+                store.createAtomic(
+                        owner, "en", "atomic-create-key", () -> {}, () -> newSession(owner))
+                    .id);
+      var responses = pool.invokeAll(calls);
+      String first = responses.get(0).get();
+      for (var response : responses) assertEquals(first, response.get());
+      assertEquals(2, db.queryForObject("SELECT COUNT(*) FROM quiz_sessions", Integer.class));
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  @Test
+  void expiredFinalCreationAuthorizationRollsBackInsert() {
+    var calls = new java.util.concurrent.atomic.AtomicInteger();
+    assertThrows(
+        RuleException.class,
+        () ->
+            store.createAtomic(
+                owner,
+                "en",
+                "expired-create-key",
+                () -> {
+                  if (calls.incrementAndGet() > 1)
+                    throw new RuleException("AUTHENTICATION_REQUIRED", 401);
+                },
+                () -> newSession(owner)));
+    assertEquals(1, db.queryForObject("SELECT COUNT(*) FROM quiz_sessions", Integer.class));
+  }
+
+  @Test
+  void postMutationAuthorizationFailureRollsBack() {
+    var calls = new java.util.concurrent.atomic.AtomicInteger();
+    String round = round();
+    assertThrows(
+        RuleException.class,
+        () ->
+            store.transactGuarded(
+                s.id,
+                owner,
+                () -> {
+                  if (calls.incrementAndGet() > 1)
+                    throw new RuleException("AUTHENTICATION_REQUIRED", 401);
+                },
+                x -> {
+                  rules.ready(x, round, now);
+                  return null;
+                }));
+    assertEquals("LOADING", store.transact(s.id, owner, x -> x.phase));
+  }
+
+  @Test
+  void failedApprovedSelectionCreatesNoSession() {
+    assertThrows(
+        RuleException.class,
+        () ->
+            store.createAtomic(
+                owner,
+                "en",
+                "no-approved-pack",
+                () -> {},
+                () -> {
+                  throw new RuleException("QUESTION_BANK_UNAVAILABLE", 503);
+                }));
+    assertEquals(1, db.queryForObject("SELECT COUNT(*) FROM quiz_sessions", Integer.class));
+  }
+
+  @Test
+  void expiredReadyConflictPersistsClosureWithoutAnyScore() {
+    String round = round();
+    long deadline = store.transact(s.id, owner, x -> x.loadingDeadline);
+    assertEquals(
+        deadline,
+        db.queryForObject(
+                "SELECT next_deadline_ms FROM quiz_sessions WHERE session_id=?", Long.class, s.id)
+            .longValue());
+    assertThrows(
+        RuleException.class,
+        () ->
+            store.transact(
+                s.id,
+                owner,
+                x -> {
+                  rules.ready(x, round, deadline);
+                  return null;
+                }));
+    assertEquals("ABANDONED", store.transact(s.id, owner, x -> x.phase));
+    assertEquals(0, store.progress(owner).gamesPlayed());
+  }
 }

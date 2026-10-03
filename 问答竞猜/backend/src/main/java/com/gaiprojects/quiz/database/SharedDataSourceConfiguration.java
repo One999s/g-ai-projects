@@ -32,6 +32,13 @@ public class SharedDataSourceConfiguration {
   }
 
   @Bean
+  com.gaiprojects.quiz.service.GameService gameService(
+      JdbcGameStore store, com.gaiprojects.quiz.store.ApprovedQuestionBank bank) {
+    return new com.gaiprojects.quiz.service.GameService(
+        store, bank, new com.gaiprojects.quiz.core.GameRules(), java.time.Clock.systemUTC());
+  }
+
+  @Bean
   static BeanPostProcessor sharedConnectionSafety(Environment env) {
     return new BeanPostProcessor() {
       @Override

@@ -25,12 +25,15 @@ class IdentityAdmissionTest {
   void missingIdentityIsDeniedBeforeMalformedBodyParsing() throws Exception {
     http.perform(post("/api/quiz/sessions").contentType("application/json").content("{bad json"))
         .andExpect(status().isServiceUnavailable())
-        .andExpect(jsonPath("$.error").value("IDENTITY_ADAPTER_NOT_CONFIGURED"));
+        .andExpect(jsonPath("$.error.code").value("IDENTITY_ADAPTER_NOT_CONFIGURED"));
   }
 
   @Test
   void claimedClientScopeCannotCreateIdentity() throws Exception {
-    http.perform(get("/api/quiz/sessions/fake").header("X-User-Id", "42").header("X-Site-Id", "7"))
+    http.perform(
+            get("/api/quiz/sessions/00000000-0000-0000-0000-000000000000/current")
+                .header("X-User-Id", "42")
+                .header("X-Site-Id", "7"))
         .andExpect(status().isServiceUnavailable())
         .andExpect(header().string("Cache-Control", "no-store"));
   }

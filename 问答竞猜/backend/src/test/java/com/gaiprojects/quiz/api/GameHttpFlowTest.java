@@ -1,0 +1,420 @@
+package com.gaiprojects.quiz.api;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.fasterxml.jackson.databind.*;
+import com.gaiprojects.quiz.QuizApplication;
+import com.gaiprojects.quiz.core.*;
+import com.gaiprojects.quiz.identity.ExistingIdentityAdapter;
+import com.gaiprojects.quiz.service.GameService;
+import com.gaiprojects.quiz.store.*;
+import java.nio.charset.StandardCharsets;
+import java.time.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
+import javax.sql.DataSource;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.*;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.*;
+import org.springframework.http.*;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.*;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.support.TransactionTemplate;
+
+@SpringBootTest(
+    classes = {QuizApplication.class, GameHttpFlowTest.Fixtures.class},
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+class GameHttpFlowTest {
+  static final long NOW = System.currentTimeMillis();
+
+  static final class TestClock extends Clock {
+    final AtomicLong value = new AtomicLong(NOW);
+    volatile boolean live;
+
+    public ZoneId getZone() {
+      return ZoneOffset.UTC;
+    }
+
+    public Clock withZone(ZoneId z) {
+      return this;
+    }
+
+    public Instant instant() {
+      return Instant.ofEpochMilli(millis());
+    }
+
+    public long millis() {
+      return live ? System.currentTimeMillis() : value.get();
+    }
+  }
+
+  static final class AuthState {
+    final AtomicLong until = new AtomicLong(Long.MAX_VALUE);
+    volatile boolean expireDuringQuota;
+    volatile boolean denyQuota;
+  }
+
+  /**
+   * Test sources only: absent from production classes/JAR and inactive without the explicit test
+   * profile.
+   */
+  @TestConfiguration
+  @Profile("test")
+  static class Fixtures {
+    @Bean
+    TestClock fixtureClock() {
+      return new TestClock();
+    }
+
+    @Bean
+    AuthState fixtureAuth() {
+      return new AuthState();
+    }
+
+    @Bean
+    DataSource fixtureDataSource() throws Exception {
+      var ds =
+          new DriverManagerDataSource(
+              "jdbc:h2:mem:http"
+                  + UUID.randomUUID()
+                  + ";MODE=MySQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000",
+              "sa",
+              "");
+      var db = new JdbcTemplate(ds);
+      String ddl;
+      try (var in =
+          getClass().getResourceAsStream("/db/migration/V001__quiz_business_tables.sql")) {
+        ddl = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+      }
+      for (String part :
+          ddl.replaceAll("(?m)^--.*$", "")
+              .replace("ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin", "")
+              .split(";")) if (!part.isBlank()) db.execute(part);
+      var list = new ArrayList<ApprovedQuestionBank.ReviewedQuestion>();
+      for (int i = 0; i < 5; i++)
+        list.add(
+            new ApprovedQuestionBank.ReviewedQuestion(
+                new Question(
+                    "http-test-" + i,
+                    "en",
+                    "SYNTHETIC TEST QUESTION",
+                    List.of("A", "B", "C", "D"),
+                    2,
+                    "SYNTHETIC TEST EXPLANATION",
+                    1000),
+                List.of("https://science.nasa.gov/"),
+                "Synthetic test only; not commercial approval",
+                "TEST_ONLY",
+                NOW - 3000));
+      String raw =
+          new ObjectMapper().writeValueAsString(new ApprovedQuestionBank.PackDocument(2, list));
+      String hash =
+          HexFormat.of()
+              .formatHex(
+                  java.security.MessageDigest.getInstance("SHA-256")
+                      .digest(raw.getBytes(StandardCharsets.UTF_8)));
+      db.update(
+          "INSERT INTO"
+              + " quiz_question_packs(pack_version,locale,status,questions_json,content_sha256,reviewer,valid_from_ms,approved_at_ms,created_at_ms)"
+              + " VALUES(?,?,?,?,?,?,?,?,?)",
+          "HTTP_TEST_ONLY",
+          "en",
+          "approved",
+          raw,
+          hash,
+          "TEST_ONLY",
+          NOW - 4000,
+          NOW - 2000,
+          NOW - 4000);
+      db.update(
+          "INSERT INTO"
+              + " quiz_question_audit(audit_id,pack_version,locale,to_status,actor_reference,reason,content_sha256,occurred_at_ms)"
+              + " VALUES(?,?,?,?,?,?,?,?)",
+          UUID.randomUUID().toString(),
+          "HTTP_TEST_ONLY",
+          "en",
+          "approved",
+          "TEST_ONLY",
+          "Synthetic fixture",
+          hash,
+          NOW - 2000);
+      return ds;
+    }
+
+    @Bean
+    JdbcGameStore fixtureStore(DataSource ds, ObjectMapper json) {
+      var tx = new TransactionTemplate(new DataSourceTransactionManager(ds));
+      tx.setIsolationLevelName("ISOLATION_READ_COMMITTED");
+      return new JdbcGameStore(new JdbcTemplate(ds), tx, json);
+    }
+
+    @Bean
+    ApprovedQuestionBank fixtureBank(DataSource ds) {
+      return new ApprovedQuestionBank(new JdbcTemplate(ds), new Random(3));
+    }
+
+    @Bean
+    GameService fixtureGame(JdbcGameStore s, ApprovedQuestionBank b, TestClock c) {
+      return new GameService(s, b, new GameRules(new Random(4)), c);
+    }
+
+    @Bean
+    ExistingIdentityAdapter fixtureIdentity(AuthState a, TestClock c) {
+      return req -> {
+        if (c.millis() >= a.until.get()) return null;
+        return switch (String.valueOf(req.getHeader("X-Test-Actor"))) {
+          case "other-site" -> new Player(8, 42);
+          case "other-user" -> new Player(7, 43);
+          default -> new Player(7, 42);
+        };
+      };
+    }
+
+    @Bean
+    RequestQuota fixtureQuota(AuthState a, TestClock c) {
+      return (p, path) -> {
+        if (a.denyQuota) throw new RuleException("RATE_LIMITED", 429);
+        if (a.expireDuringQuota) a.until.set(c.millis());
+      };
+    }
+  }
+
+  @Autowired TestRestTemplate http;
+  @Autowired ObjectMapper json;
+  @Autowired TestClock clock;
+  @Autowired AuthState auth;
+  @Autowired DataSource ds;
+  @LocalServerPort int port;
+
+  @BeforeEach
+  void reset() {
+    clock.live = false;
+    clock.value.set(NOW);
+    auth.until.set(Long.MAX_VALUE);
+    auth.expireDuringQuota = false;
+    auth.denyQuota = false;
+    var db = new JdbcTemplate(ds);
+    for (String t : List.of("quiz_outbox", "quiz_scores", "quiz_progress", "quiz_sessions"))
+      db.execute("DELETE FROM " + t);
+    db.update("UPDATE quiz_question_packs SET status='approved'");
+  }
+
+  ResponseEntity<String> request(String path, HttpMethod method, String body, String actor) {
+    var headers = new HttpHeaders();
+    headers.set("X-Test-Actor", actor);
+    if (body != null) headers.setContentType(MediaType.APPLICATION_JSON);
+    return http.exchange(
+        "http://127.0.0.1:" + port + path, method, new HttpEntity<>(body, headers), String.class);
+  }
+
+  JsonNode data(ResponseEntity<String> response) throws Exception {
+    assertTrue(response.getStatusCode().is2xxSuccessful(), response.getBody());
+    return json.readTree(response.getBody()).get("data");
+  }
+
+  JsonNode create(String key) throws Exception {
+    return data(
+        request(
+            "/api/quiz/sessions",
+            HttpMethod.POST,
+            "{\"locale\":\"en\",\"idempotencyKey\":\"" + key + "\"}",
+            "owner"));
+  }
+
+  String roundPath(JsonNode s) {
+    return "/api/quiz/sessions/"
+        + s.get("sessionId").asText()
+        + "/rounds/"
+        + s.get("roundId").asText();
+  }
+
+  @Test
+  void sourceJavaScriptClientCompletesActualServerGame() throws Exception {
+    clock.live = true;
+    var script =
+        java.nio.file.Path.of("../frontend/tests/http-server-smoke.mjs")
+            .toAbsolutePath()
+            .normalize();
+    assertTrue(java.nio.file.Files.isRegularFile(script));
+    var process =
+        new ProcessBuilder("node", script.toString(), "http://127.0.0.1:" + port)
+            .redirectErrorStream(true)
+            .start();
+    try {
+      assertTrue(process.waitFor(30, TimeUnit.SECONDS), "HTTP client timeout");
+      String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+      assertEquals(0, process.exitValue(), output);
+      assertTrue(output.contains("\"score\":750"), output);
+    } finally {
+      if (process.isAlive()) process.destroyForcibly();
+    }
+  }
+
+  @Test
+  void replayUsesOriginalSessionEvenAfterPackRetirement() throws Exception {
+    String key = "repeat-" + UUID.randomUUID();
+    var a = create(key);
+    new JdbcTemplate(ds).update("UPDATE quiz_question_packs SET status='retired'");
+    var b = create(key);
+    assertEquals(a.get("sessionId"), b.get("sessionId"));
+    var newGame =
+        request(
+            "/api/quiz/sessions",
+            HttpMethod.POST,
+            "{\"locale\":\"en\",\"idempotencyKey\":\"brand-new-key\"}",
+            "owner");
+    assertEquals(503, newGame.getStatusCode().value());
+  }
+
+  @Test
+  void crossUserAndSiteReadsAre404() throws Exception {
+    var s = create("scope-" + UUID.randomUUID());
+    String path = "/api/quiz/sessions/" + s.get("sessionId").asText() + "/current";
+    for (String actor : List.of("other-user", "other-site"))
+      assertEquals(404, request(path, HttpMethod.GET, null, actor).getStatusCode().value());
+  }
+
+  @Test
+  void deadlineResponseCommitsTimeoutAndIsRecoverable() throws Exception {
+    var s = create("deadline-" + UUID.randomUUID());
+    var ready = data(request(roundPath(s) + "/ready", HttpMethod.POST, null, "owner"));
+    clock.value.set(ready.get("deadline").asLong());
+    var late =
+        request(
+            roundPath(s) + "/answer",
+            HttpMethod.POST,
+            "{\"choice\":2,\"idempotencyKey\":\"late-answer\"}",
+            "owner");
+    assertEquals(409, late.getStatusCode().value());
+    var current =
+        data(
+            request(
+                "/api/quiz/sessions/" + s.get("sessionId").asText() + "/current",
+                HttpMethod.GET,
+                null,
+                "owner"));
+    assertTrue(current.get("reveal").get("timedOut").asBoolean());
+    assertEquals(0, current.get("score").asInt());
+  }
+
+  @Test
+  void quotaExpiryUnknownFieldsAndOversizedInputCannotCreateSessions() throws Exception {
+    auth.denyQuota = true;
+    assertEquals(
+        429,
+        request("/api/quiz/sessions", HttpMethod.POST, "{bad json", "owner")
+            .getStatusCode()
+            .value());
+    auth.denyQuota = false;
+    auth.expireDuringQuota = true;
+    assertEquals(
+        401,
+        request(
+                "/api/quiz/sessions",
+                HttpMethod.POST,
+                "{\"locale\":\"en\",\"idempotencyKey\":\"expired-key\"}",
+                "owner")
+            .getStatusCode()
+            .value());
+    auth.expireDuringQuota = false;
+    auth.until.set(Long.MAX_VALUE);
+    assertEquals(
+        400,
+        request(
+                "/api/quiz/sessions",
+                HttpMethod.POST,
+                "{\"locale\":\"en\",\"idempotencyKey\":\"extra-key\",\"siteUserId\":42}",
+                "owner")
+            .getStatusCode()
+            .value());
+    assertEquals(
+        413,
+        request("/api/quiz/sessions", HttpMethod.POST, " ".repeat(20000), "owner")
+            .getStatusCode()
+            .value());
+    assertEquals(
+        0,
+        new JdbcTemplate(ds).queryForObject("SELECT COUNT(*) FROM quiz_sessions", Integer.class));
+  }
+
+  @Test
+  void originBoundaryRejectsForeignPortUserInfoAndNullOrigins() throws Exception {
+    for (String origin :
+        List.of(
+            "null",
+            "https://evil.invalid",
+            "http://127.0.0.1:" + (port + 1),
+            "http://user@127.0.0.1:" + port)) {
+      var headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_JSON);
+      headers.set("Origin", origin);
+      var response =
+          http.exchange(
+              "http://127.0.0.1:" + port + "/api/quiz/sessions",
+              HttpMethod.POST,
+              new HttpEntity<>(
+                  "{\"locale\":\"en\",\"idempotencyKey\":\"origin-test-key\"}", headers),
+              String.class);
+      assertEquals(403, response.getStatusCode().value(), origin);
+    }
+    assertEquals(
+        0,
+        new JdbcTemplate(ds).queryForObject("SELECT COUNT(*) FROM quiz_sessions", Integer.class));
+  }
+
+  @Test
+  void duplicateKeysAndScalarCoercionAreRejected() throws Exception {
+    assertEquals(
+        400,
+        request(
+                "/api/quiz/sessions",
+                HttpMethod.POST,
+                "{\"locale\":\"zh-CN\",\"locale\":\"en\",\"idempotencyKey\":\"duplicate-json\"}",
+                "owner")
+            .getStatusCode()
+            .value());
+    var s = create("types-" + UUID.randomUUID());
+    assertEquals(
+        400,
+        request(
+                roundPath(s) + "/answer",
+                HttpMethod.POST,
+                "{\"choice\":\"2\",\"idempotencyKey\":\"string-choice\"}",
+                "owner")
+            .getStatusCode()
+            .value());
+  }
+
+  @Test
+  void lifelineAbandonAndInvalidReadyBodyHaveBoundedEffects() throws Exception {
+    var s = create("life-" + UUID.randomUUID());
+    assertEquals(
+        400,
+        request(roundPath(s) + "/ready", HttpMethod.POST, "{}", "owner").getStatusCode().value());
+    var ready = data(request(roundPath(s) + "/ready", HttpMethod.POST, null, "owner"));
+    clock.value.set(ready.get("opensAt").asLong());
+    var fifty = data(request(roundPath(s) + "/fifty-fifty", HttpMethod.POST, null, "owner"));
+    assertEquals(2, fifty.get("eliminated").size());
+    assertEquals(
+        409,
+        request(roundPath(s) + "/fifty-fifty", HttpMethod.POST, null, "owner")
+            .getStatusCode()
+            .value());
+    var abandoned =
+        data(
+            request(
+                "/api/quiz/sessions/" + s.get("sessionId").asText() + "/abandon",
+                HttpMethod.POST,
+                null,
+                "owner"));
+    assertEquals("ABANDONED", abandoned.get("phase").asText());
+  }
+}

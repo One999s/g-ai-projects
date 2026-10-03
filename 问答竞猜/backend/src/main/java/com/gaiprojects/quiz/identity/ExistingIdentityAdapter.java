@@ -5,8 +5,9 @@ import jakarta.servlet.http.HttpServletRequest;
 
 public interface ExistingIdentityAdapter {
   /**
-   * Verify original login/expiry/revocation/status/site and cookie CSRF if applicable. Never trust
-   * client IDs.
+   * Perform fresh, bounded verification on EVERY invocation, without renewing or changing identity.
+   * Do not consume the body. Verify original login/expiry/revocation/status/site and cookie CSRF if
+   * applicable. Never trust client IDs.
    */
   Player resolve(HttpServletRequest request);
 }

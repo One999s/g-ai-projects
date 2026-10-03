@@ -19,6 +19,7 @@ public final class JdbcGameStore {
   public JdbcGameStore(JdbcTemplate db, TransactionTemplate tx, ObjectMapper json) {
     this.db = db;
     this.tx = tx;
+    this.tx.setTimeout(5);
     this.json = json;
   }
 
@@ -38,7 +39,7 @@ public final class JdbcGameStore {
     try {
       var envelope = json.readValue(row.state, StateEnvelope.class);
       var s = envelope.state();
-      if (envelope.schemaVersion() != 2
+      if (envelope.schemaVersion() != 3
           || s == null
           || !row.id.equals(s.id)
           || s.player == null
@@ -50,6 +51,7 @@ public final class JdbcGameStore {
           || s.roundIds == null
           || s.roundIds.size() != 5
           || new HashSet<>(s.roundIds).size() != 5
+          || s.loadingDeadline <= 0
           || s.index < 0
           || s.index >= 5
           || s.results == null
@@ -118,7 +120,9 @@ public final class JdbcGameStore {
   }
 
   private static Long due(GameSession s) {
-    return Set.of("READING", "ANSWERING").contains(s.phase) ? s.deadline : null;
+    if (s.phase.equals("LOADING")) return Long.valueOf(s.loadingDeadline);
+    if (Set.of("READING", "ANSWERING").contains(s.phase)) return Long.valueOf(s.deadline);
+    return null;
   }
 
   public GameSession create(GameSession candidate, String creationKey) {
@@ -128,6 +132,10 @@ public final class JdbcGameStore {
         || !candidate.phase.equals("LOADING")
         || candidate.revision != 0
         || !candidate.results.isEmpty()) throw new RuleException("INVALID_NEW_SESSION", 400);
+    invariants(candidate);
+    if (candidate.loadingDeadline <= candidate.createdAt
+        || candidate.expiresAt <= candidate.loadingDeadline)
+      throw new RuleException("INVALID_NEW_SESSION", 400);
     return tx.execute(
         status -> {
           try {
@@ -143,11 +151,11 @@ public final class JdbcGameStore {
                 candidate.bankVersion,
                 "ACTIVE",
                 candidate.revision,
-                encode(new StateEnvelope(2, candidate)),
+                encode(new StateEnvelope(3, candidate)),
                 candidate.createdAt,
                 candidate.createdAt,
                 candidate.expiresAt,
-                null);
+                candidate.loadingDeadline);
             return candidate;
           } catch (DuplicateKeyException conflict) {
             var existing =
@@ -171,6 +179,11 @@ public final class JdbcGameStore {
    * HTTP409.
    */
   public <T> T transact(String id, Player player, Function<GameSession, T> action) {
+    return transactGuarded(id, player, () -> {}, action);
+  }
+
+  public <T> T transactGuarded(
+      String id, Player player, Runnable authorization, Function<GameSession, T> action) {
     if (player == null) throw new RuleException("SESSION_NOT_FOUND", 404);
     var failure = new RuleException[1];
     T result =
@@ -185,6 +198,7 @@ public final class JdbcGameStore {
                       player.siteId(),
                       player.siteUserId());
               if (found.isEmpty()) throw new RuleException("SESSION_NOT_FOUND", 404);
+              authorization.run();
               var s = decode(found.get(0));
               long revision = s.revision;
               boolean settled = s.results.size() == 5;
@@ -205,7 +219,7 @@ public final class JdbcGameStore {
                             + " WHERE session_id=? AND site_id=? AND site_user_id=? AND revision=?",
                         rowStatus(s),
                         s.revision,
-                        encode(new StateEnvelope(2, s)),
+                        encode(new StateEnvelope(3, s)),
                         System.currentTimeMillis(),
                         due(s),
                         s.id,
@@ -215,10 +229,48 @@ public final class JdbcGameStore {
                 if (count != 1) throw new IllegalStateException("QUIZ_SESSION_CAS_FAILED");
                 if (!settled && s.results.size() == 5) settle(s);
               }
+              authorization.run();
               return value;
             });
     if (failure[0] != null) throw failure[0];
     return result;
+  }
+
+  /**
+   * One outer transaction owns replay lookup, approved selection, insert and final authorization.
+   */
+  public GameSession createAtomic(
+      Player player,
+      String locale,
+      String creationKey,
+      Runnable authorization,
+      java.util.function.Supplier<GameSession> factory) {
+    key(creationKey);
+    if (player == null) throw new RuleException("AUTHENTICATION_REQUIRED", 401);
+    if (!Set.of("en", "zh-CN").contains(locale)) throw new RuleException("UNSUPPORTED_LOCALE", 400);
+    return tx.execute(
+        status -> {
+          authorization.run();
+          var found =
+              rows(
+                  "SELECT session_id,site_id,site_user_id,revision,state_json FROM quiz_sessions"
+                      + " WHERE site_id=? AND site_user_id=? AND creation_key=? FOR UPDATE",
+                  player.siteId(),
+                  player.siteUserId(),
+                  creationKey);
+          GameSession result;
+          if (!found.isEmpty()) {
+            result = decode(found.get(0));
+            if (!result.locale.equals(locale)) throw new RuleException("IDEMPOTENCY_CONFLICT", 409);
+          } else {
+            var candidate = factory.get();
+            if (!player.equals(candidate.player) || !locale.equals(candidate.locale))
+              throw new IllegalStateException("QUIZ_SCOPE_MUTATION_REJECTED");
+            result = create(candidate, creationKey);
+          }
+          authorization.run();
+          return result;
+        });
   }
 
   private void settle(GameSession s) {

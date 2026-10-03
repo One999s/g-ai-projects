@@ -11,7 +11,7 @@ public final class GameSession {
   public List<Question> questions;
   public List<String> roundIds;
   public int index, score, streak, bestStreak;
-  public long revision, createdAt, expiresAt, opensAt, deadline;
+  public long revision, createdAt, expiresAt, opensAt, deadline, loadingDeadline;
   public String phase = "LOADING";
   public boolean lifelineUsed;
   public Set<Integer> eliminated = new HashSet<>();

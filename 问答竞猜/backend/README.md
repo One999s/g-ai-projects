@@ -23,3 +23,9 @@ Business HTTP remains fail-closed pending verified existing identity, approved q
 ## B06 approved text question loader
 
 ApprovedQuestionBank joins eligibility and matching approval evidence in one SQL statement, limits stored JSON size before transfer, hashes the exact UTF-8 bytes and strictly validates schemaVersion2 text-pack governance. It returns an immutable five-question selection with version/hash; no approval write, demo fallback or public full-bank API exists. The choice linearizes at its database read; the future session HTTP integration must define creation/publication concurrency explicitly. See docs/CONTENT.md for the schema boundary and docs/REMAINING-LAUNCH-PATH.md for the bounded next steps.
+
+## B07 authoritative HTTP
+
+Session APIs, atomic start/replay, transaction authorization rechecks and the source JavaScript transport are implemented; see docs/API.md. Original identity and distributed quota implementations are still mandatory and absent by default, so production traffic remains fail-closed. Node20+ is additionally required by the actual source-client HTTP integration test; CI pins Node24.
+
+Session storage is now schemaVersion3 (bounded loadingDeadline), replacing the experimental version2 reader without automatic conversion. Existing incompatible bytes are preserved and rejected. This is a data compatibility gate, not a live migration.
