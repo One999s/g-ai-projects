@@ -3,11 +3,17 @@
 export class QuizApiError extends Error {
  constructor(code,status=0,requestId=null){super(code);this.name='QuizApiError';this.code=code;this.status=status;this.requestId=requestId;this.retryable=status===0||status>=500}
 }
-export function createQuizApi({base='/api/quiz',fetcher=globalThis.fetch.bind(globalThis)}={}){
+export function createQuizApi({base='/api/quiz',fetcher=globalThis.fetch.bind(globalThis),timeoutMs=10000}={}){
+ if(!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>30000)throw new TypeError('Invalid request timeout')
  const root=base.replace(/\/$/,'')
  function id(value){if(typeof value!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value))throw new QuizApiError('INVALID_RESOURCE_ID',400);return value}
  async function send(path,method='GET',body){
-  let response;try{response=await fetcher(root+path,{method,credentials:'same-origin',cache:'no-store',headers:body===undefined?{}:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})}catch{throw new QuizApiError('NETWORK_ERROR')}
+  const controller=new AbortController();let timer
+  const expired=new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new QuizApiError('REQUEST_TIMEOUT'))},timeoutMs)})
+  try{return await Promise.race([request(path,method,body,controller.signal),expired])}finally{clearTimeout(timer)}
+ }
+ async function request(path,method,body,signal){
+  let response;try{response=await fetcher(root+path,{method,signal,credentials:'same-origin',cache:'no-store',headers:body===undefined?{}:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})})}catch{throw new QuizApiError('NETWORK_ERROR')}
   let value;try{value=await response.json()}catch{throw new QuizApiError('INVALID_API_RESPONSE',response.status)}
   if(value?.version!==1||value?.mode!=='server'||!Object.hasOwn(value,'data')||!Object.hasOwn(value,'error'))throw new QuizApiError('INVALID_API_RESPONSE',response.status)
   if(!response.ok||value.error!==null)throw new QuizApiError(value.error?.code||'HTTP_ERROR',response.status,value.requestId)

@@ -9,3 +9,4 @@ target/
 *.jar
 *.class
 __pycache__/
+.attach_pid*
