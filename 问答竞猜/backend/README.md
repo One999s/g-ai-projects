@@ -19,3 +19,7 @@ Use profile shared-db only with an explicitly reviewed SHARED_DATABASE_URL and Q
 Actual MySQL suite: QUIZ_MYSQL_INTEGRATION=true opts into tests at fixed127.0.0.1:13306, creating/dropping only random quiz_it_UUID schemas. Never forward that endpoint to production. Credentials QUIZ_IT_MYSQL_USER/PASSWORD are only for this isolated test endpoint. Default tests skip the real-engine suite; H2 MySQL mode is not evidence of actual MySQL behavior.
 
 Business HTTP remains fail-closed pending verified existing identity, approved question bank, Redis admission controls and full runtime integration. No outbox consumer or external score publication exists.
+
+## B06 approved text question loader
+
+ApprovedQuestionBank joins eligibility and matching approval evidence in one SQL statement, limits stored JSON size before transfer, hashes the exact UTF-8 bytes and strictly validates schemaVersion2 text-pack governance. It returns an immutable five-question selection with version/hash; no approval write, demo fallback or public full-bank API exists. The choice linearizes at its database read; the future session HTTP integration must define creation/publication concurrency explicitly. See docs/CONTENT.md for the schema boundary and docs/REMAINING-LAUNCH-PATH.md for the bounded next steps.

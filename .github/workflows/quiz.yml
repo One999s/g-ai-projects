@@ -68,7 +68,7 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: 问答竞猜/backend/pom.xml
-      - run: mvn -B -ntp -Dtest=MysqlJdbcGameStoreIntegrationTest -DforkCount=1 '-DargLine=-Xmx256m -XX:ActiveProcessorCount=2' test
+      - run: mvn -B -ntp '-Dtest=Mysql*IntegrationTest' -DforkCount=1 '-DargLine=-Xmx256m -XX:ActiveProcessorCount=2' test
         env:
           MAVEN_OPTS: '-Xmx256m -XX:ActiveProcessorCount=2'
           QUIZ_MYSQL_INTEGRATION: 'true'

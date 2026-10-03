@@ -73,6 +73,12 @@ class MysqlJdbcGameStoreIntegrationTest extends JdbcGameStoreTest {
             database, runtime.queryForObject("SELECT DATABASE()", String.class));
         org.junit.jupiter.api.Assertions.assertEquals(
             1, runtime.queryForObject("SELECT COUNT(*) FROM quiz_sessions", Integer.class));
+        var unavailable =
+            org.junit.jupiter.api.Assertions.assertThrows(
+                com.gaiprojects.quiz.core.RuleException.class,
+                () -> context.getBean(ApprovedQuestionBank.class).select("en", now));
+        org.junit.jupiter.api.Assertions.assertEquals(
+            "QUESTION_BANK_UNAVAILABLE", unavailable.code);
         org.junit.jupiter.api.Assertions.assertThrows(
             org.springframework.dao.DataAccessException.class,
             () -> runtime.execute("CREATE TABLE forbidden(id INT)"));

@@ -27,6 +27,11 @@ public class SharedDataSourceConfiguration {
   }
 
   @Bean
+  com.gaiprojects.quiz.store.ApprovedQuestionBank approvedQuestionBank(DataSource ds) {
+    return new com.gaiprojects.quiz.store.ApprovedQuestionBank(new JdbcTemplate(ds));
+  }
+
+  @Bean
   static BeanPostProcessor sharedConnectionSafety(Environment env) {
     return new BeanPostProcessor() {
       @Override
