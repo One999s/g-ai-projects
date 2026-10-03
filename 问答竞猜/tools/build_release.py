@@ -42,7 +42,8 @@ def inspect_jar(path):
             raise RuntimeError('Test dependency found in runtime JAR')
         required = ['BOOT-INF/classes/com/gaiprojects/quiz/QuizApplication.class',
                     'BOOT-INF/classes/com/gaiprojects/quiz/api/IdentityAdmission.class',
-                    'BOOT-INF/classes/com/gaiprojects/quiz/quota/RedisRequestQuota.class']
+                    'BOOT-INF/classes/com/gaiprojects/quiz/quota/RedisRequestQuota.class',
+                    'BOOT-INF/classes/com/gaiprojects/quiz/speech/VoiceService.class']
         if any(n not in names for n in required):
             raise RuntimeError('Required runtime protection missing from JAR')
         return {'runtimeClassesAndResources': len(classes), 'testFixturesAbsent': True,
@@ -63,6 +64,33 @@ def report_counts(directory):
         raise RuntimeError('Backend test failures')
     totals['passed'] = totals['tests'] - totals['skipped']
     return totals
+
+
+def copy_tracked_project_inputs(root, project, output, inputs):
+    """Never sweep ignored .env, cache, model or unrelated local files into a delivery."""
+    prefix = str(project.relative_to(root)) + '/'
+    for name in inputs:
+        if not name.startswith(prefix):
+            continue
+        relative = Path(name[len(prefix):])
+        if str(relative) == 'README.md' or relative.parts[0] in {'deploy', 'docs', 'content', 'speech-worker'}:
+            destination = output / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(root / name, destination)
+
+
+def copy_frontend(dist, output):
+    allowed = {'.html', '.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.json', '.webmanifest', '.wav', '.mp3', '.flac', '.ogg'}
+    for path in sorted(dist.rglob('*')):
+        relative = path.relative_to(dist)
+        if path.is_symlink() or any(part.startswith('.') for part in relative.parts):
+            raise RuntimeError('Unexpected frontend artifact path')
+        if path.is_file():
+            if path.suffix not in allowed:
+                raise RuntimeError('Unexpected frontend artifact type')
+            target = output / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, target)
 
 
 def main():
@@ -113,12 +141,8 @@ def main():
         raise RuntimeError('Source changed during build')
     output.mkdir(parents=True)
     shutil.copy2(jar, output / ('quiz-challenge-' + commit[:12] + '.jar'))
-    shutil.copytree(PROJECT / 'frontend/dist', output / 'frontend')
-    shutil.copytree(PROJECT / 'deploy', output / 'deploy')
-    shutil.copytree(PROJECT / 'docs', output / 'docs')
-    if (PROJECT / 'content').is_dir():
-        shutil.copytree(PROJECT / 'content', output / 'content')
-    shutil.copy2(PROJECT / 'README.md', output / 'README.md')
+    copy_frontend(PROJECT / 'frontend/dist', output / 'frontend')
+    copy_tracked_project_inputs(ROOT, PROJECT, output, inputs)
     with tempfile.TemporaryFile() as tar:
         subprocess.run(['git', 'archive', '--format=tar', commit, '--', *relevant], cwd=ROOT,
                        stdout=tar, check=True)

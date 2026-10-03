@@ -34,7 +34,7 @@ final class BufferedRequest extends HttpServletRequestWrapper {
       }
 
       public void setReadListener(ReadListener listener) {
-        throw new UnsupportedOperationException("Synchronous JSON only");
+        throw new UnsupportedOperationException("Synchronous bounded body only");
       }
     };
   }

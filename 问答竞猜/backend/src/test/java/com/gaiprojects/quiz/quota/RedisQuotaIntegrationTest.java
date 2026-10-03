@@ -213,4 +213,19 @@ class RedisQuotaIntegrationTest {
       admin.sync().aclDeluser(user);
     }
   }
+
+  @Test
+  void twoInstancesShareThreeVoiceAttemptsPerBoundRound() {
+    String sid = UUID.randomUUID().toString(), rid = UUID.randomUUID().toString();
+    String path = "/api/quiz/sessions/" + sid + "/rounds/" + rid + "/voice-candidate";
+    try {
+      assertEquals(200, status(new RedisRequestQuota(first), path));
+      assertEquals(200, status(new RedisRequestQuota(second), path));
+      assertEquals(200, status(new RedisRequestQuota(first), path));
+      assertEquals(429, status(new RedisRequestQuota(second), path));
+      assertEquals(3L, admin.sync().zcard(key("voice:" + sid + ":" + rid)));
+    } finally {
+      admin.sync().del(key("voice:" + sid + ":" + rid));
+    }
+  }
 }

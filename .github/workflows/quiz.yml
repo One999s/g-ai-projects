@@ -106,7 +106,7 @@ jobs:
           MAVEN_OPTS: '-Xmx256m -XX:ActiveProcessorCount=2'
           QUIZ_REDIS_INTEGRATION: 'true'
   release-bundle:
-    needs: [frontend, backend, mysql-contract, redis-contract, content-contract]
+    needs: [frontend, backend, mysql-contract, redis-contract, content-contract, speech-contract]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -150,3 +150,11 @@ jobs:
       - run: python3 -m unittest discover -s 问答竞猜/tools -p 'test_*.py' -v
       - run: python3 问答竞猜/tools/content_candidates.py 问答竞猜/content/candidates/world-foundations-r1.json
       - run: python3 问答竞猜/tools/audio_candidates.py 问答竞猜/content/candidates/world-foundations-r1.json 问答竞猜/content/audio-candidates/world-foundations-en-r1 --verify
+
+  speech-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      # Standard-library protocol tests only. No native model, package install or audio upload.
+      - run: python3 -m unittest discover -s 问答竞猜/speech-worker -p 'test_*.py' -v

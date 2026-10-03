@@ -158,4 +158,23 @@ class RedisRequestQuotaTest {
         .withPropertyValues("quiz.redis.enabled=true")
         .run(c -> assertNotNull(c.getStartupFailure()));
   }
+
+  @Test
+  void voiceAttemptsUseBoundSessionRoundScopeAndThreeLimit() {
+    var seen = new ArrayList<String[]>();
+    var q =
+        new RedisRequestQuota(
+            (script, keys, args) -> {
+              seen.add(keys);
+              seen.add(args);
+              return 1L;
+            });
+    q.check(
+        new Player(2, 3),
+        "/api/quiz/sessions/00000000-0000-0000-0000-000000000001/rounds/00000000-0000-0000-0000-000000000002/voice-candidate");
+    assertEquals(
+        "quiz:quota:v1:{2:3}:voice:00000000-0000-0000-0000-000000000001:00000000-0000-0000-0000-000000000002",
+        seen.get(0)[1]);
+    assertEquals("3", seen.get(1)[2]);
+  }
 }

@@ -31,3 +31,5 @@ spring:
 quiz:
   redis:
     enabled: ${QUIZ_REDIS_ENABLED:false}
+  asr:
+    enabled: ${QUIZ_ASR_ENABLED:false}

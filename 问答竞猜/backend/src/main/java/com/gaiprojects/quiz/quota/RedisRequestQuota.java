@@ -45,10 +45,24 @@ public final class RedisRequestQuota implements RequestQuota {
     Objects.requireNonNull(path);
     String prefix = "quiz:quota:v1:{" + player.siteId() + ":" + player.siteUserId() + "}:";
     boolean create = path.equals("/api/quiz/sessions");
+    var voice =
+        java.util.regex.Pattern.compile(
+                "/api/quiz/sessions/([0-9a-f-]{36})/rounds/([0-9a-f-]{36})/voice-candidate")
+            .matcher(path);
+    boolean isVoice = voice.matches();
     String[] keys =
-        create ? new String[] {prefix + "all", prefix + "create"} : new String[] {prefix + "all"};
+        create
+            ? new String[] {prefix + "all", prefix + "create"}
+            : isVoice
+                ? new String[] {
+                  prefix + "all", prefix + "voice:" + voice.group(1) + ":" + voice.group(2)
+                }
+                : new String[] {prefix + "all"};
     String nonce = UUID.randomUUID().toString();
-    String[] args = create ? new String[] {nonce, "120", "6"} : new String[] {nonce, "120"};
+    String[] args =
+        create
+            ? new String[] {nonce, "120", "6"}
+            : isVoice ? new String[] {nonce, "120", "3"} : new String[] {nonce, "120"};
     Long result;
     try {
       result = executor.eval(SCRIPT, keys, args);

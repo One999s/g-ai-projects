@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaiprojects.quiz.core.*;
 import com.gaiprojects.quiz.identity.*;
 import com.gaiprojects.quiz.service.GameService;
+import com.gaiprojects.quiz.speech.*;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import java.io.*;
@@ -27,28 +28,36 @@ public final class IdentityAdmission extends OncePerRequestFilter {
   private final ObjectProvider<RequestQuota> quotas;
   private final ObjectProvider<GameService> services;
   private final ObjectMapper json;
+  private final ObjectProvider<VoiceService> voices;
 
   public IdentityAdmission(
       ObjectProvider<ExistingIdentityAdapter> a,
       ObjectProvider<RequestQuota> q,
       ObjectProvider<GameService> s,
+      ObjectProvider<VoiceService> v,
       ObjectMapper json) {
     adapters = a;
     quotas = q;
     services = s;
+    voices = v;
     this.json = json;
   }
 
   private boolean known(String method, String path) {
     if (method.equals("GET"))
-      return path.equals("/api/quiz/me/progress")
+      return path.equals("/api/quiz/me/capabilities")
+          || path.equals("/api/quiz/me/progress")
           || path.equals("/api/quiz/me/sessions")
           || path.matches("/api/quiz/sessions/" + ID + "/current");
     if (!method.equals("POST")) return false;
     return path.equals("/api/quiz/sessions")
         || path.matches("/api/quiz/sessions/" + ID + "/abandon")
         || path.matches(
-            "/api/quiz/sessions/" + ID + "/rounds/" + ID + "/(ready|answer|next|fifty-fifty)");
+            "/api/quiz/sessions/"
+                + ID
+                + "/rounds/"
+                + ID
+                + "/(ready|answer|next|fifty-fifty|voice-candidate)");
   }
 
   @Override
@@ -108,11 +117,33 @@ public final class IdentityAdmission extends OncePerRequestFilter {
       deny(req, res, 403, "ORIGIN_NOT_ALLOWED");
       return;
     }
+    boolean hasWave = path.endsWith("/voice-candidate");
+    if (hasWave) {
+      var voice = voices.getIfAvailable();
+      if (voice == null) {
+        deny(req, res, 503, "PRIVATE_ASR_NOT_CONFIGURED");
+        return;
+      }
+      var earlyAccess =
+          new VerifiedAccess(
+              first,
+              () -> {
+                if (!first.equals(resolve(adapter, req)))
+                  throw new RuleException("AUTHENTICATION_REQUIRED", 401);
+              });
+      String[] parts = path.split("/");
+      try {
+        voice.window(earlyAccess, parts[4], parts[6]);
+      } catch (RuleException rejected) {
+        deny(req, res, rejected.status, rejected.code);
+        return;
+      }
+    }
     boolean hasJson =
         method.equals("POST") && (path.equals("/api/quiz/sessions") || path.endsWith("/answer"));
     byte[] bytes;
     try {
-      bytes = read(req, hasJson);
+      bytes = read(req, hasJson, hasWave);
     } catch (RuleException invalid) {
       deny(req, res, invalid.status, invalid.code);
       return;
@@ -167,23 +198,29 @@ public final class IdentityAdmission extends OncePerRequestFilter {
     }
   }
 
-  private static byte[] read(HttpServletRequest req, boolean json) throws IOException {
+  private static byte[] read(HttpServletRequest req, boolean json, boolean wave)
+      throws IOException {
     long n = req.getContentLengthLong();
     if (req.getHeader("Transfer-Encoding") != null)
       throw new RuleException("TRANSFER_ENCODING_NOT_ALLOWED", 400);
     if (req.getHeader("Content-Encoding") != null)
       throw new RuleException("CONTENT_ENCODING_NOT_ALLOWED", 415);
-    if (!json) {
+    if (!json && !wave) {
       if (n > 0) throw new RuleException("UNEXPECTED_BODY", 400);
       return new byte[0];
     }
     String type = req.getContentType();
-    if (type == null
-        || !type.toLowerCase(java.util.Locale.ROOT)
-            .matches("application/json(\\s*;\\s*charset=utf-8)?"))
+    if (wave && (type == null || !type.equalsIgnoreCase("audio/wav")))
+      throw new RuleException("CANONICAL_WAV_REQUIRED", 415);
+    if (json
+        && (type == null
+            || !type.toLowerCase(java.util.Locale.ROOT)
+                .matches("application/json(\\s*;\\s*charset=utf-8)?")))
       throw new RuleException("JSON_REQUIRED", 415);
     if (n < 0) throw new RuleException("CONTENT_LENGTH_REQUIRED", 411);
-    if (n > 16384) throw new RuleException("REQUEST_TOO_LARGE", 413);
+    int max = wave ? CanonicalWave.MAX_BYTES : 16384;
+    if (n > max) throw new RuleException("REQUEST_TOO_LARGE", 413);
+    if (wave && n < 3244) throw new RuleException("CANONICAL_WAV_REQUIRED", 415);
     if (n < 2) throw new RuleException("INVALID_JSON", 400);
     long deadline = System.nanoTime() + 10_000_000_000L;
     var out = new ByteArrayOutputStream((int) n);
@@ -192,11 +229,13 @@ public final class IdentityAdmission extends OncePerRequestFilter {
     int read;
     while ((read = input.read(buffer)) != -1) {
       if (System.nanoTime() > deadline) throw new RuleException("BODY_READ_BUDGET_EXCEEDED", 408);
-      if (out.size() + read > 16384) throw new RuleException("REQUEST_TOO_LARGE", 413);
+      if (out.size() + read > max) throw new RuleException("REQUEST_TOO_LARGE", 413);
       out.write(buffer, 0, read);
     }
     if (out.size() != n) throw new RuleException("CONTENT_LENGTH_MISMATCH", 400);
-    return out.toByteArray();
+    byte[] result = out.toByteArray();
+    if (wave) CanonicalWave.verify(result);
+    return result;
   }
 
   private void deny(HttpServletRequest req, HttpServletResponse res, int status, String code)

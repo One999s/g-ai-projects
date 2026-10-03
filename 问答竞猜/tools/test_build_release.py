@@ -46,5 +46,31 @@ class ReleaseReceiptTest(unittest.TestCase):
                     jar.writestr('BOOT-INF/classes/com/gaiprojects/quiz/' + name + '.class', b'')
             with self.assertRaises(RuntimeError): release.inspect_jar(path)
 
+    def test_required_runtime_with_no_fixture_marker_is_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / 'app.jar'
+            with zipfile.ZipFile(path, 'w') as jar:
+                for name in ['QuizApplication', 'api/IdentityAdmission', 'quota/RedisRequestQuota', 'speech/VoiceService']:
+                    jar.writestr('BOOT-INF/classes/com/gaiprojects/quiz/' + name + '.class', b'fixture-free')
+            self.assertTrue(release.inspect_jar(path)['testFixturesAbsent'])
+
+    def test_ignored_local_secret_and_model_files_are_not_copied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp); project = root / 'quiz'; output = root / 'out'
+            (project / 'deploy').mkdir(parents=True)
+            (project / 'deploy/RUNBOOK.md').write_text('Reviewed documentation')
+            (project / 'deploy/.env').write_text('PRIVATE_LOCAL_ONLY')
+            (project / 'deploy/model.bin').write_bytes(b'UNTRACKED')
+            release.copy_tracked_project_inputs(root, project, output, {'quiz/deploy/RUNBOOK.md': 'hash'})
+            self.assertTrue((output / 'deploy/RUNBOOK.md').exists())
+            self.assertFalse((output / 'deploy/.env').exists())
+            self.assertFalse((output / 'deploy/model.bin').exists())
+
+    def test_hidden_frontend_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp); dist = root / 'dist'; dist.mkdir()
+            (dist / '.env').write_text('PRIVATE_LOCAL_ONLY')
+            with self.assertRaises(RuntimeError): release.copy_frontend(dist, root / 'out')
+
 
 if __name__ == '__main__': unittest.main()

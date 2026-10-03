@@ -23,3 +23,7 @@ JSON只接受有Content-Length的UTF-8 application/json，最多16KiB；拒绝Tr
 RequestQuota没有宽松生产fallback；缺失时拒绝。真实Redis实现仍待完成。测试注入只在src/test且需test profile，不打入生产JAR。NODE_HTTP用同一server-api.js源码，通过实际loopback HTTP完成5题750分及成绩/历史验证；其身份和内容是合成fixture，持久层是H2，不代表真实用户登录或此HTTP全链已在MySQL上运行。
 
 B07会话存储信封升级到schemaVersion3以固定loadingDeadline。B05/B06的版本2和更早/不兼容会话保持原字节并拒绝自动纳管；未提供自动迁移，更没有删除旧数据。物理V001仍不变。真实历史兼容必须另行审阅。
+
+## B12 optional speech candidate
+
+GET `/api/quiz/me/capabilities` reports whether the candidate processor is configured, not whether production speech is accepted. POST `/sessions/{id}/rounds/{round}/voice-candidate` under `/api/quiz` accepts only canonical mono16kHz PCM16 WAV (44-byte header,0.1–6sec,max192044bytes). It is not a JSON route. Authentication/quota/scope/phase precede audio parsing; request and response remain bounded. No correct answer or score is returned. `requiresConfirmation=true` always requires a separate ordinary answer call; see SPEECH-CANDIDATES.md. Feature is disabled unless explicitly configured.

@@ -11,3 +11,4 @@ target/
 __pycache__/
 .attach_pid*
 .release/
+/:memory:.ses

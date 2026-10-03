@@ -35,3 +35,9 @@ Session storage is now schemaVersion3 (bounded loadingDeadline), replacing the e
 Explicit opt-in creates a controlled Lettuce connection and Redis-backed RequestQuota. No Spring Redis URL/property binding, local-counter fallback or default external destination exists. See deploy/REDIS-ADMISSION.md for settings, finite resource limits, ACL boundary and restart/eviction limitations.
 
 `QUIZ_REDIS_INTEGRATION=true` only connects to disposable127.0.0.1:16379 for actual-engine contracts. Its synthetic ACL fixture is removed in finally. Never forward the fixture endpoint to a real service. CI has its own Redis7.4 service; default tests skip these contracts rather than pretend they ran.
+
+## B12 optional speech candidate backend
+
+ASR is off by default. Explicit configuration permits only a fixed-path literal-loopback processor, with bounded PCM/body/response/deadline and fresh owner/round/identity checks. It only suggests a choice; a separate ordinary answer request is required to score. Per-round Redis attempts are capped at3. The Python worker uses a reviewed dependency list that excludes ONNX Runtime and refuses its presence before native model import. See docs/SPEECH-CANDIDATES.md and speech-worker/README.md for limits and incomplete acceptance gates.
+
+One explicit local synthetic-English model/HTTP/confirmation contract passed. Default CI skips that native model test; it runs standard-library protocol contracts instead. No production identity, user microphone, Chinese recognition or zero-egress assertion is made.

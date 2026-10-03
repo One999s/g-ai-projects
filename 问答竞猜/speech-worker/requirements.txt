@@ -1,0 +1,2 @@
+# Do not resolve faster-whisper transitive defaults: they install ONNX Runtime.
+# Use install_runtime.py, which installs the explicit requirements.lock with --no-deps.

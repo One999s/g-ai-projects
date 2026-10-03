@@ -7,6 +7,7 @@ import com.gaiprojects.quiz.QuizApplication;
 import com.gaiprojects.quiz.core.*;
 import com.gaiprojects.quiz.identity.ExistingIdentityAdapter;
 import com.gaiprojects.quiz.service.GameService;
+import com.gaiprojects.quiz.speech.*;
 import com.gaiprojects.quiz.store.*;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
@@ -62,6 +63,12 @@ class GameHttpFlowTest {
     volatile boolean denyQuota;
   }
 
+  static final class SpeechState {
+    String text = "Option C";
+    int calls;
+    Runnable during = () -> {};
+  }
+
   /**
    * Test sources only: absent from production classes/JAR and inactive without the explicit test
    * profile.
@@ -69,6 +76,22 @@ class GameHttpFlowTest {
   @TestConfiguration
   @Profile("test")
   static class Fixtures {
+    @Bean
+    SpeechState fixtureSpeech() {
+      return new SpeechState();
+    }
+
+    @Bean
+    VoiceService fixtureVoice(GameService game, SpeechState state) {
+      return new VoiceService(
+          game,
+          (bytes, locale, timeout) -> {
+            state.calls++;
+            state.during.run();
+            return state.text;
+          });
+    }
+
     @Bean
     TestClock fixtureClock() {
       return new TestClock();
@@ -190,12 +213,16 @@ class GameHttpFlowTest {
   @Autowired TestRestTemplate http;
   @Autowired ObjectMapper json;
   @Autowired TestClock clock;
+  @Autowired SpeechState speech;
   @Autowired AuthState auth;
   @Autowired DataSource ds;
   @LocalServerPort int port;
 
   @BeforeEach
   void reset() {
+    speech.text = "Option C";
+    speech.calls = 0;
+    speech.during = () -> {};
     clock.live = false;
     clock.value.set(NOW);
     auth.until.set(Long.MAX_VALUE);
@@ -416,5 +443,132 @@ class GameHttpFlowTest {
                 null,
                 "owner"));
     assertEquals("ABANDONED", abandoned.get("phase").asText());
+  }
+
+  byte[] wave() {
+    var b = java.nio.ByteBuffer.allocate(32044).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+    b.put("RIFF".getBytes(StandardCharsets.US_ASCII))
+        .putInt(32036)
+        .put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII))
+        .putInt(16)
+        .putShort((short) 1)
+        .putShort((short) 1)
+        .putInt(16000)
+        .putInt(32000)
+        .putShort((short) 2)
+        .putShort((short) 16)
+        .put("data".getBytes(StandardCharsets.US_ASCII))
+        .putInt(32000);
+    return b.array();
+  }
+
+  ResponseEntity<String> voice(JsonNode s, byte[] bytes, String actor) {
+    var headers = new HttpHeaders();
+    headers.set("X-Test-Actor", actor);
+    headers.setContentType(MediaType.parseMediaType("audio/wav"));
+    return http.exchange(
+        "http://127.0.0.1:" + port + roundPath(s) + "/voice-candidate",
+        HttpMethod.POST,
+        new HttpEntity<>(bytes, headers),
+        String.class);
+  }
+
+  JsonNode answering() throws Exception {
+    var s = create("voice-" + UUID.randomUUID());
+    var r = data(request(roundPath(s) + "/ready", HttpMethod.POST, null, "owner"));
+    clock.value.set(r.get("opensAt").asLong());
+    return s;
+  }
+
+  @Test
+  void speechCandidateNeedsSeparateAuthoritativeConfirmation() throws Exception {
+    var s = answering();
+    var candidate = data(voice(s, wave(), "owner"));
+    assertEquals(2, candidate.get("choice").asInt());
+    assertTrue(candidate.get("requiresConfirmation").asBoolean());
+    assertFalse(candidate.has("correct"));
+    var current =
+        data(
+            request(
+                "/api/quiz/sessions/" + s.get("sessionId").asText() + "/current",
+                HttpMethod.GET,
+                null,
+                "owner"));
+    assertEquals(0, current.get("score").asInt());
+    assertTrue(current.get("reveal").isNull());
+    assertEquals(
+        0, new JdbcTemplate(ds).queryForObject("SELECT COUNT(*) FROM quiz_scores", Integer.class));
+    var confirmed =
+        data(
+            request(
+                roundPath(s) + "/answer",
+                HttpMethod.POST,
+                "{\"choice\":2,\"idempotencyKey\":\"voice-confirmed\"}",
+                "owner"));
+    assertEquals(100, confirmed.get("session").get("score").asInt());
+    assertEquals(409, voice(s, wave(), "owner").getStatusCode().value());
+    assertEquals(1, speech.calls);
+  }
+
+  @Test
+  void ownershipAndPhaseAreCheckedBeforeMalformedAudio() throws Exception {
+    var s = create("voice-early");
+    assertEquals(409, voice(s, new byte[3], "owner").getStatusCode().value());
+    assertEquals(404, voice(s, new byte[3], "other-site").getStatusCode().value());
+    assertEquals(404, voice(s, new byte[3], "other-user").getStatusCode().value());
+    assertEquals(0, speech.calls);
+  }
+
+  @Test
+  void speechDeadlineDuringRecognitionDropsCandidateAndCommitsCanonicalTimeout() throws Exception {
+    var s = answering();
+    speech.during = () -> clock.value.addAndGet(20000);
+    assertEquals(409, voice(s, wave(), "owner").getStatusCode().value());
+    var current =
+        data(
+            request(
+                "/api/quiz/sessions/" + s.get("sessionId").asText() + "/current",
+                HttpMethod.GET,
+                null,
+                "owner"));
+    assertTrue(current.get("reveal").get("timedOut").asBoolean());
+    assertEquals(0, current.get("score").asInt());
+  }
+
+  @Test
+  void revokedIdentityDuringRecognitionCannotReturnTranscript() throws Exception {
+    var s = answering();
+    speech.during = () -> auth.until.set(clock.millis());
+    var r = voice(s, wave(), "owner");
+    assertEquals(401, r.getStatusCode().value());
+    assertFalse(r.getBody().contains("transcript"));
+    assertEquals(
+        0, new JdbcTemplate(ds).queryForObject("SELECT COUNT(*) FROM quiz_scores", Integer.class));
+  }
+
+  @Test
+  void ambiguousAndEliminatedSpeechNeverChangesScore() throws Exception {
+    var s = answering();
+    speech.text = "A or B";
+    assertTrue(data(voice(s, wave(), "owner")).get("choice").isNull());
+    var fifty = data(request(roundPath(s) + "/fifty-fifty", HttpMethod.POST, null, "owner"));
+    speech.text =
+        "ABCD"
+            .substring(
+                fifty.get("eliminated").get(0).asInt(), fifty.get("eliminated").get(0).asInt() + 1);
+    assertTrue(data(voice(s, wave(), "owner")).get("choice").isNull());
+    assertEquals(0, fifty.get("score").asInt());
+  }
+
+  @Test
+  void invalidOrTooLargeAudioNeverReachesPrivateProcessor() throws Exception {
+    var s = answering();
+    assertEquals(415, voice(s, new byte[32044], "owner").getStatusCode().value());
+    assertEquals(413, voice(s, new byte[192046], "owner").getStatusCode().value());
+    assertEquals(0, speech.calls);
+    assertTrue(
+        data(request("/api/quiz/me/capabilities", HttpMethod.GET, null, "owner"))
+            .get("voiceCandidateConfigured")
+            .asBoolean());
   }
 }
