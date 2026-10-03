@@ -1,0 +1,6 @@
+export function createStudioAudio(){
+ let context,bus,timer,step=0,enabled=false
+ function tone(freq,time,duration,gain=.035,type='sine') {if(!context||!enabled)return;const o=context.createOscillator(),g=context.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(0,time);g.gain.linearRampToValueAtTime(gain,time+.012);g.gain.exponentialRampToValueAtTime(.0001,time+duration);o.connect(g);g.connect(bus);o.start(time);o.stop(time+duration+.02)}
+ function pulse(){if(!enabled||document.hidden)return;const t=context.currentTime;const seq=[110,0,164.81,0,130.81,0,146.83,0];if(seq[step%8])tone(seq[step%8],t,.65,.027,'triangle');tone(55,t,.13,.022);step++}
+ return {async enable(value){enabled=value;if(value&&!context){context=new (window.AudioContext||window.webkitAudioContext)();bus=context.createGain();bus.gain.value=.55;bus.connect(context.destination)}if(value){await context.resume();if(!timer)timer=setInterval(pulse,400)}else if(timer){clearInterval(timer);timer=null}if(bus)bus.gain.value=value?.55:0},cue(kind){if(!enabled)return;const t=context.currentTime;const notes=kind==='correct'?[523.25,659.25,783.99]:kind==='wrong'?[164.81,130.81]:[440];notes.forEach((f,i)=>tone(f,t+i*.095,.3,.06))},close(){clearInterval(timer);timer=null;if(context)context.close()}}
+}
