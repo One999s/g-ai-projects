@@ -1,0 +1,7 @@
+{
+  "index": "https://download.pytorch.org/whl/cpu",
+  "version": "2.14.1+cpu",
+  "filename": "torch-2.14.1+cpu-cp312-cp312-manylinux_2_28_x86_64.whl",
+  "bytes": 196253677,
+  "sha256": "5a6363570c753812540a05eb82380e329469cbe668643e88111414c12627711f"
+}

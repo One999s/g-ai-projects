@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "subdirectory": "melo",
+      "repository": "myshell-ai/MeloTTS-Chinese",
+      "revision": "af5d207a364ea4208c6f589c89f57f88414bdd16"
+    },
+    {
+      "subdirectory": "bert",
+      "repository": "google-bert/bert-base-multilingual-uncased",
+      "revision": "7cbf9a625e29989f6b9c6c2fa68234c304f7e38f"
+    }
+  ],
+  "files": {
+    "melo/checkpoint.pth": {
+      "size": 207770124,
+      "sha256": "a74e9eadffff065c75eb6dfa040efa72cad23e72cfea70d39190bc174fb97093"
+    },
+    "melo/config.json": {
+      "size": 2296,
+      "sha256": "d58b5acdab89ad2bbd65325affab309ae3cb964834b02f9a60587474e81c8bb9"
+    },
+    "bert/model.safetensors": {
+      "size": 672247920,
+      "sha256": "b33adb2b700b7029a64a4a14ddec6bda8555d2ca879e80a75789fd9542a6290e"
+    },
+    "bert/config.json": {
+      "size": 625,
+      "sha256": "fba5d4b0a351a43f6ccb7a6587301fd9f6876ca36aae62af762af67c8f18db1c"
+    },
+    "bert/tokenizer.json": {
+      "size": 1715180,
+      "sha256": "41a9e8ccfd02a7bf5bb8426ed22eec3a5bd81d85d7c10ef4a5cbdbfa21faa21b"
+    },
+    "bert/tokenizer_config.json": {
+      "size": 48,
+      "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10"
+    },
+    "bert/vocab.txt": {
+      "size": 871891,
+      "sha256": "87b44292b452f6c05afa49b2e488e7eedf79ea4f4c39db6f2f4b37764228ef3f"
+    }
+  }
+}

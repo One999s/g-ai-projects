@@ -12,3 +12,10 @@ __pycache__/
 .attach_pid*
 .release/
 /:memory:.ses
+/问答竞猜/tts-candidates/**/venv/
+/问答竞猜/tts-candidates/**/models/
+/问答竞猜/tts-candidates/**/wheelhouse/
+/问答竞猜/tts-candidates/**/pip-cache/
+/问答竞猜/tts-candidates/**/hf-cache/
+/问答竞猜/tts-candidates/**/*.pth
+/问答竞猜/tts-candidates/**/*.safetensors

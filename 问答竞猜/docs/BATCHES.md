@@ -120,3 +120,11 @@
 - 按真实身份/Redis/Origin及当前用户/轮次授权descriptor与二进制读取；仅LOADING/READING，读取前复验，no-store；不改答案或服务器时钟。前端声音开启且主动Ready才有限预加载，核验hash/时长后按权威读题起点播放，静音/隐藏/过期/取消/换题均停止
 - 本轮本地前端45 Node+54 DOM=99通过，双入口构建；后端170发现=118通过+52 opt-in跳过。实际HTTP16/16包含同源客户端五轮750分、合成旁白字节/hash与语音候选确认；旁白包边界8/8；工具38/38。本批没有重跑真实MySQL/Redis/模型，交独立CI验证服务合同
 - 实际听感、设备和真实身份仍未验收；静音合成测试fixture不证明任何候选已试听。中文候选下一步先做安全/许可检查，不使用ONNX遥测路径
+
+## B15 · 安全本地中文旁白单题候选
+- 官方MeloTTS固定Git SHA的中文推理子集，保留MIT/Paddle Apache NOTICE；中文checkpoint与Google多语言BERT safetensors均固定revision、7文件882,608,084字节和SHA256。权重/venv/cache不进Git或交付包
+- 独立固定官方PyTorch CPU wheel及PyPI hash白名单，排除ONNX/hf-xet/多语言UI/训练依赖；移除自动下载与pickle缓存路径，显式weights_only/local_files_only/safetensors。运行前禁遥测、清隐式token、Python层拒网/子进程、2计算线程、3GiB RSS观察停止和预测帧上限
+- 实际一题world-001中文合成成功：7.593秒，最终模型阶段5.76秒，峰值RSS1,863,900KiB。修复BERT被通用loader误报Mistral的路径后，重复同一题音频hash相同。20条原始中文稿的快/慢WordPiece token完全一致、无UNK且音素对齐；不是20条音频或实际试听
+- 只提交一条未试听/未批准的synthetic pilot，绑定文本、来源、模型manifest和renderer hash；不自动送入B14正式WAV包，不把许可声明当独占声音权利/训练资料保证
+- strace被环境PTRACE权限限制，未提权或换路跟踪；正常合成另行运行成功，原生网络观察仍未验证。Python audit guard不等于原生零外传证明
+- 本批新标准库TTS/实际pilot文件检查12/12；打包工具38/38与语音替身9/9重新通过。无本地JVM/DB/ASR重跑，无实际设备/听感验收。CI只跑标准库guard和已提交候选校验，不下载安装或运行真实TTS

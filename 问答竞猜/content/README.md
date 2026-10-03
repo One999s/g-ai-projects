@@ -37,3 +37,7 @@ python3 问答竞猜/tools/audio_candidates.py 问答竞猜/content/candidates/w
 ## 已审校文本导出
 
 `python3 tools/content_review.py content/candidates/world-foundations-r1.json content/reviews/world-foundations-r1.assistant.json --output /new/reviewed-text-directory`（项目目录执行）。验证全部20条hash与来源后，生成带真实assistant审校标识的schema2文本。无DB连接/自动approved/audit写；公开题与固定答案布局仅用于开发，不能作为保密竞赛内容。
+
+## B15中文单题pilot
+
+`audio-candidates/world-foundations-zh-pilot`只包含world-001的一条本地MeloTTS中文候选与真实运行收据，7.593秒、规范mono 16k PCM16 WAV；未试听/未批准，不能直接投入正式旁白。安装来源、固定许可声明、2线程/3GiB停止阈值和原生网络观测限制见[中文候选说明](../tts-candidates/README.md)。英文旧manifest的zh-CN缺失指它自己的音频包；中文完整20题仍未生成。

@@ -1,0 +1,67 @@
+{
+  "repository": "https://github.com/myshell-ai/MeloTTS",
+  "commit": "209145371cff8fc3bd60d7be902ea69cbdb7965a",
+  "files": [
+    {
+      "path": "melo/models.py",
+      "upstreamSha256": "f96eef52845224b5797e54008013a5b6a5fafad2035713dc5181a5db8bf8bef4",
+      "adaptedSha256": "565be90cccbed604045cede9c472532587dfccf5ac390c8a9b2f30e6e237aa23"
+    },
+    {
+      "path": "melo/commons.py",
+      "upstreamSha256": "046943d265635c3d9c99195562e703564a26300981a7db5b87d4cd3fd180ae0d",
+      "adaptedSha256": "046943d265635c3d9c99195562e703564a26300981a7db5b87d4cd3fd180ae0d"
+    },
+    {
+      "path": "melo/modules.py",
+      "upstreamSha256": "de80baee7dc8d89d621c541b899a84193df4bb3ef95f5e6d076cc37b6bb10bf6",
+      "adaptedSha256": "de80baee7dc8d89d621c541b899a84193df4bb3ef95f5e6d076cc37b6bb10bf6"
+    },
+    {
+      "path": "melo/attentions.py",
+      "upstreamSha256": "5261b73e4945651e9f7133375f4f83c1532a30f8227f6249c7006d696a737353",
+      "adaptedSha256": "5261b73e4945651e9f7133375f4f83c1532a30f8227f6249c7006d696a737353"
+    },
+    {
+      "path": "melo/transforms.py",
+      "upstreamSha256": "e6798989a0d75cbec45e7e24e3697e1c4886b3664c6a80a452645ef1d2a93f9c",
+      "adaptedSha256": "e6798989a0d75cbec45e7e24e3697e1c4886b3664c6a80a452645ef1d2a93f9c"
+    },
+    {
+      "path": "melo/text/chinese.py",
+      "upstreamSha256": "ba92f22d3cb72a22b13aa92a86eabe6b220582b9c00a71502e056ef000860d51",
+      "adaptedSha256": "bad9b4748d8f1b224ebe6442081b54ce47485e38ca2693c7b78d6493da7829ff"
+    },
+    {
+      "path": "melo/text/tone_sandhi.py",
+      "upstreamSha256": "230ba9ffe13dadc5f80c117ea3234f88512380a7d45069a08861e24fc2a33aa9",
+      "adaptedSha256": "230ba9ffe13dadc5f80c117ea3234f88512380a7d45069a08861e24fc2a33aa9"
+    },
+    {
+      "path": "melo/text/symbols.py",
+      "upstreamSha256": "4c1f3839f7e209b5da45daeb269f955b302d0d4c0df6dbf9be88d534b25ceea2",
+      "adaptedSha256": "4c1f3839f7e209b5da45daeb269f955b302d0d4c0df6dbf9be88d534b25ceea2"
+    },
+    {
+      "path": "melo/text/opencpop-strict.txt",
+      "upstreamSha256": "d66bbb1380a8ebf17d7ace5bf4b459f3728a469eea2aaeae2aeb3969b88223ff",
+      "adaptedSha256": "d66bbb1380a8ebf17d7ace5bf4b459f3728a469eea2aaeae2aeb3969b88223ff"
+    },
+    {
+      "path": "melo/__init__.py",
+      "upstreamSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "adaptedSha256": "f9adcf592d0c0ff9fcb6c83b89dd203ca0ca5b1cdb15f44c6cd5a24c9d3d0a14"
+    },
+    {
+      "path": "melo/text/__init__.py",
+      "upstreamSha256": "eca8c17764c4dcd57d3a71185775d1c6e4d53689d6a9a54708ec63577a2ac8ba",
+      "adaptedSha256": "4bdf0002b7eb56693cf5655bee2d8d4427f032b2f4ebc0c459f63d03fcc2d7c7"
+    }
+  ],
+  "changes": [
+    "Removed training-only monotonic alignment JIT dependency; training call fails explicitly.",
+    "Capped predicted duration before attention allocations; never truncate speech to claim completion.",
+    "Removed unused Chinese BERT import path; local safetensors loader lives in our renderer.",
+    "No upstream API, downloader, utils, pickle cache, multilingual cleaner or UI files are imported."
+  ]
+}

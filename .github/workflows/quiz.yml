@@ -159,3 +159,5 @@ jobs:
       - uses: actions/checkout@v4
       # Standard-library protocol tests only. No native model, package install or audio upload.
       - run: python3 -m unittest discover -s 问答竞猜/speech-worker -p 'test_*.py' -v
+      # Standard-library guards and the checked-in unlistened pilot only; no native TTS or downloads.
+      - run: python3 -m unittest discover -s 问答竞猜/tts-candidates -p 'test_*.py' -v

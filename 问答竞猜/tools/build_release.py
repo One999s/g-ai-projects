@@ -75,7 +75,7 @@ def copy_tracked_project_inputs(root, project, output, inputs):
         if not name.startswith(prefix):
             continue
         relative = Path(name[len(prefix):])
-        if str(relative) == 'README.md' or relative.parts[0] in {'deploy', 'docs', 'content', 'speech-worker'}:
+        if str(relative) == 'README.md' or relative.parts[0] in {'deploy', 'docs', 'content', 'speech-worker', 'tts-candidates'}:
             destination = output / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(root / name, destination)

@@ -1,0 +1,17 @@
+MeloTTS inference subset: Copyright (c) 2024 MyShell.ai, MIT license.
+https://github.com/myshell-ai/MeloTTS/tree/209145371cff8fc3bd60d7be902ea69cbdb7965a
+Full upstream MIT notice is retained in vendor/LICENSE-MeloTTS.
+The file vendor/melo/text/tone_sandhi.py retains its PaddlePaddle Authors (2021)
+Apache-2.0 notice. License: https://www.apache.org/licenses/LICENSE-2.0
+The upstream project credits TTS, VITS, VITS2 and Bert-VITS2.
+
+Official model sources, downloaded separately and not redistributed in this repo:
+- myshell-ai/MeloTTS-Chinese: model card declares MIT.
+  https://huggingface.co/myshell-ai/MeloTTS-Chinese
+- google-bert/bert-base-multilingual-uncased: model card declares Apache-2.0.
+  https://huggingface.co/google-bert/bert-base-multilingual-uncased
+
+This attribution records the upstream declarations. It does not assert exclusive
+voice rights, guarantee training-data provenance, or certify pronunciation/listening.
+No voice cloning, reference-speaker recordings or user recordings are used.
+The renderer produces synthetic development candidates only, never approval records.

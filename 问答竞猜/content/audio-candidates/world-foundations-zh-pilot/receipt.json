@@ -1,0 +1,23 @@
+{
+  "candidateSchemaVersion": 1,
+  "questionId": "world-001",
+  "locale": "zh-CN",
+  "textSha256": "18563175776324cf7272a33218b8b3a63b9af9944fc8a3c9c9bb85d8a4319d2f",
+  "sourceCandidateSha256": "8c7e21216889069f496b47b95ea5992a8ba90a0388f6e143a8fde3015fbfa434",
+  "audioSha256": "acac146ac210276ada96f981fa867807561b27fa70893ff403314b0faf50261a",
+  "durationMillis": 7593,
+  "readingMillis": 15000,
+  "peak": 0.43289184719323076,
+  "rms": 0.07834741954106847,
+  "speed": 1.0,
+  "engine": "MeloTTS pinned Chinese-only PyTorch adapter",
+  "modelManifestSha256": "92aa18e93d1a85e04575bd603fed0702fe0361752bfbdb4bde905e6c3e6e8594",
+  "rendererSha256": "8d237b6eeae61d620302ed64ee37f50e9c8a9d7d4fa4e704f79daafa4b6d12cc",
+  "nativeNetworkObservation": false,
+  "elapsedSeconds": 5.76,
+  "peakRssKiB": 1863900,
+  "listened": false,
+  "approved": false,
+  "realUserAudio": false,
+  "networkAudit": "Python audit operations denied; not a comprehensive native network observation"
+}
