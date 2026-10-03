@@ -106,7 +106,7 @@ jobs:
           MAVEN_OPTS: '-Xmx256m -XX:ActiveProcessorCount=2'
           QUIZ_REDIS_INTEGRATION: 'true'
   release-bundle:
-    needs: [frontend, backend, mysql-contract, redis-contract]
+    needs: [frontend, backend, mysql-contract, redis-contract, content-contract]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -135,3 +135,18 @@ jobs:
           retention-days: 14
           compression-level: 0
           include-hidden-files: true
+
+  content-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure distribution FFmpeg tools
+        run: |
+          if ! command -v ffmpeg || ! command -v ffprobe; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+      - run: python3 -m unittest discover -s 问答竞猜/tools -p 'test_*.py' -v
+      - run: python3 问答竞猜/tools/content_candidates.py 问答竞猜/content/candidates/world-foundations-r1.json
+      - run: python3 问答竞猜/tools/audio_candidates.py 问答竞猜/content/candidates/world-foundations-r1.json 问答竞猜/content/audio-candidates/world-foundations-en-r1 --verify

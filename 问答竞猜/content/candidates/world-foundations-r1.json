@@ -1,0 +1,716 @@
+{
+  "candidateSchemaVersion": 1,
+  "packVersion": "public-world-foundations-20261003-r1",
+  "status": "draft",
+  "visibility": "public-development-candidate",
+  "sourceCheckedOn": "2026-10-03",
+  "approval": {
+    "factReview": "pending-human",
+    "translationReview": "pending-human",
+    "rightsReview": "pending-human",
+    "audioReview": "pending-listening",
+    "approved": false
+  },
+  "questions": [
+    {
+      "id": "world-001",
+      "topic": "space",
+      "sourceUrls": [
+        "https://science.nasa.gov/jupiter/jupiter-facts/"
+      ],
+      "sourceFact": "Jupiter is the largest planet in the Solar System.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "太阳系中体积最大的行星是哪一颗？",
+          "options": [
+            "火星",
+            "木星",
+            "金星",
+            "水星"
+          ],
+          "answer": 1,
+          "explanation": "木星是太阳系中最大的行星。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Which planet is the largest in our Solar System?",
+          "options": [
+            "Mars",
+            "Jupiter",
+            "Venus",
+            "Mercury"
+          ],
+          "answer": 1,
+          "explanation": "Jupiter is the largest planet in our Solar System.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-002",
+      "topic": "space",
+      "sourceUrls": [
+        "https://science.nasa.gov/earth/facts/"
+      ],
+      "sourceFact": "Earth is the third planet from the Sun.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "从太阳向外数，地球排第几位？",
+          "options": [
+            "第一位",
+            "第二位",
+            "第三位",
+            "第四位"
+          ],
+          "answer": 2,
+          "explanation": "水星、金星之后是地球，因此地球排第三。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Counting outward from the Sun, what is Earth’s position?",
+          "options": [
+            "First",
+            "Second",
+            "Third",
+            "Fourth"
+          ],
+          "answer": 2,
+          "explanation": "Mercury and Venus come before Earth, making Earth third.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-003",
+      "topic": "space",
+      "sourceUrls": [
+        "https://science.nasa.gov/earth/facts/"
+      ],
+      "sourceFact": "Nitrogen is the largest component of Earth’s near-surface atmosphere.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "地球近地表空气中，含量最多的气体是哪一种？",
+          "options": [
+            "氧气",
+            "二氧化碳",
+            "氩气",
+            "氮气"
+          ],
+          "answer": 3,
+          "explanation": "近地表大气约有百分之七十八是氮气。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Which gas makes up the largest share of Earth’s near-surface air?",
+          "options": [
+            "Oxygen",
+            "Carbon dioxide",
+            "Argon",
+            "Nitrogen"
+          ],
+          "answer": 3,
+          "explanation": "Nitrogen accounts for about 78 percent of the near-surface atmosphere.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-004",
+      "topic": "space",
+      "sourceUrls": [
+        "https://science.nasa.gov/mars/facts/"
+      ],
+      "sourceFact": "Oxidized iron in Martian material contributes to its reddish appearance.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "火星表面的红色主要与哪种物质有关？",
+          "options": [
+            "氧化的铁",
+            "液态汞",
+            "绿色叶绿素",
+            "纯净冰晶"
+          ],
+          "answer": 0,
+          "explanation": "火星岩石和尘土中的铁发生氧化，使表面呈红色。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "What chiefly gives Martian surface material its reddish color?",
+          "options": [
+            "Oxidized iron",
+            "Liquid mercury",
+            "Green chlorophyll",
+            "Pure ice crystals"
+          ],
+          "answer": 0,
+          "explanation": "Oxidation of iron in Martian rocks and dust contributes to the red appearance.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-005",
+      "topic": "space",
+      "sourceUrls": [
+        "https://science.nasa.gov/saturn/moons/titan/facts/"
+      ],
+      "sourceFact": "Titan is Saturn’s largest moon.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "土卫六，也叫泰坦，是哪颗行星的卫星？",
+          "options": [
+            "木星",
+            "土星",
+            "天王星",
+            "海王星"
+          ],
+          "answer": 1,
+          "explanation": "泰坦是土星最大的卫星。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Titan is a moon of which planet?",
+          "options": [
+            "Jupiter",
+            "Saturn",
+            "Uranus",
+            "Neptune"
+          ],
+          "answer": 1,
+          "explanation": "Titan is Saturn’s largest moon.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-006",
+      "topic": "space",
+      "sourceUrls": [
+        "https://science.nasa.gov/sun/facts/"
+      ],
+      "sourceFact": "The Sun is the Solar System’s only star.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "太阳系中唯一的恒星是哪一颗？",
+          "options": [
+            "天狼星",
+            "北极星",
+            "太阳",
+            "比邻星"
+          ],
+          "answer": 2,
+          "explanation": "太阳是一颗恒星，地球等行星围绕它运行。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Which is the only star in our Solar System?",
+          "options": [
+            "Sirius",
+            "Polaris",
+            "The Sun",
+            "Proxima Centauri"
+          ],
+          "answer": 2,
+          "explanation": "The Sun is a star, orbited by Earth and the other planets.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-007",
+      "topic": "ocean",
+      "sourceUrls": [
+        "https://oceanservice.noaa.gov/facts/biggestocean.html?no_redirect=true"
+      ],
+      "sourceFact": "The Pacific is the largest ocean basin.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "地球上面积最大的海洋区域是哪一个？",
+          "options": [
+            "印度洋",
+            "北冰洋",
+            "大西洋",
+            "太平洋"
+          ],
+          "answer": 3,
+          "explanation": "太平洋的面积在各大洋中最大。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Which ocean basin is the largest on Earth?",
+          "options": [
+            "Indian",
+            "Arctic",
+            "Atlantic",
+            "Pacific"
+          ],
+          "answer": 3,
+          "explanation": "The Pacific is the largest ocean basin.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-008",
+      "topic": "ocean",
+      "sourceUrls": [
+        "https://oceanexplorer.noaa.gov/ocean-fact/ocean-depth/"
+      ],
+      "sourceFact": "Challenger Deep is in the Mariana Trench.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "挑战者深渊位于哪条海沟？",
+          "options": [
+            "马里亚纳海沟",
+            "秘鲁—智利海沟",
+            "波多黎各海沟",
+            "爪哇海沟"
+          ],
+          "answer": 0,
+          "explanation": "挑战者深渊位于太平洋的马里亚纳海沟。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Which trench contains Challenger Deep?",
+          "options": [
+            "Mariana Trench",
+            "Peru–Chile Trench",
+            "Puerto Rico Trench",
+            "Java Trench"
+          ],
+          "answer": 0,
+          "explanation": "Challenger Deep lies in the Mariana Trench in the Pacific Ocean.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-009",
+      "topic": "measurement",
+      "sourceUrls": [
+        "https://www.bipm.org/en/measurement-units/si-base-units"
+      ],
+      "sourceFact": "The SI base unit of electric current is the ampere.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "国际单位制中，电流的基本单位是什么？",
+          "options": [
+            "伏特",
+            "安培",
+            "欧姆",
+            "瓦特"
+          ],
+          "answer": 1,
+          "explanation": "电流的国际单位制基本单位是安培，符号为A。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "What is the SI base unit of electric current?",
+          "options": [
+            "Volt",
+            "Ampere",
+            "Ohm",
+            "Watt"
+          ],
+          "answer": 1,
+          "explanation": "The ampere, symbol A, is the SI base unit of electric current.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-010",
+      "topic": "measurement",
+      "sourceUrls": [
+        "https://www.bipm.org/en/measurement-units/si-base-units"
+      ],
+      "sourceFact": "The SI base unit of amount of substance is the mole.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "国际单位制中，物质的量用哪个基本单位表示？",
+          "options": [
+            "千克",
+            "开尔文",
+            "摩尔",
+            "坎德拉"
+          ],
+          "answer": 2,
+          "explanation": "物质的量的基本单位是摩尔，符号为mol。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Which SI base unit measures amount of substance?",
+          "options": [
+            "Kilogram",
+            "Kelvin",
+            "Mole",
+            "Candela"
+          ],
+          "answer": 2,
+          "explanation": "The mole, symbol mol, is the base unit for amount of substance.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-011",
+      "topic": "measurement",
+      "sourceUrls": [
+        "https://www.bipm.org/en/measurement-units/si-base-units"
+      ],
+      "sourceFact": "The SI base unit of thermodynamic temperature is the kelvin.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "国际单位制中，热力学温度的基本单位是什么？",
+          "options": [
+            "摄氏度",
+            "华氏度",
+            "焦耳",
+            "开尔文"
+          ],
+          "answer": 3,
+          "explanation": "热力学温度的基本单位是开尔文，符号为K。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "What is the SI base unit of thermodynamic temperature?",
+          "options": [
+            "Degree Celsius",
+            "Degree Fahrenheit",
+            "Joule",
+            "Kelvin"
+          ],
+          "answer": 3,
+          "explanation": "The kelvin, symbol K, is the base unit of thermodynamic temperature.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-012",
+      "topic": "measurement",
+      "sourceUrls": [
+        "https://www.bipm.org/en/measurement-units/si-base-units"
+      ],
+      "sourceFact": "The SI base unit of length is the metre.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "国际单位制中，长度的基本单位是什么？",
+          "options": [
+            "米",
+            "升",
+            "秒",
+            "帕斯卡"
+          ],
+          "answer": 0,
+          "explanation": "长度的国际单位制基本单位是米，符号为m。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "What is the SI base unit of length?",
+          "options": [
+            "Metre",
+            "Litre",
+            "Second",
+            "Pascal"
+          ],
+          "answer": 0,
+          "explanation": "The metre, symbol m, is the SI base unit of length.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-013",
+      "topic": "heritage",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/252/"
+      ],
+      "sourceFact": "The Taj Mahal is in India.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "泰姬陵位于哪个国家？",
+          "options": [
+            "尼泊尔",
+            "印度",
+            "土耳其",
+            "伊朗"
+          ],
+          "answer": 1,
+          "explanation": "泰姬陵位于印度的阿格拉。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "In which country is the Taj Mahal?",
+          "options": [
+            "Nepal",
+            "India",
+            "Türkiye",
+            "Iran"
+          ],
+          "answer": 1,
+          "explanation": "The Taj Mahal is in Agra, India.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-014",
+      "topic": "heritage",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/274"
+      ],
+      "sourceFact": "Machu Picchu is in Peru.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "马丘比丘古迹位于哪个国家？",
+          "options": [
+            "墨西哥",
+            "巴西",
+            "秘鲁",
+            "智利"
+          ],
+          "answer": 2,
+          "explanation": "马丘比丘位于秘鲁的安第斯山地区。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "In which country is Machu Picchu?",
+          "options": [
+            "Mexico",
+            "Brazil",
+            "Peru",
+            "Chile"
+          ],
+          "answer": 2,
+          "explanation": "Machu Picchu is in the Peruvian Andes.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-015",
+      "topic": "heritage",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/326"
+      ],
+      "sourceFact": "Petra is in Jordan.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "佩特拉古城位于哪个国家？",
+          "options": [
+            "埃及",
+            "希腊",
+            "黎巴嫩",
+            "约旦"
+          ],
+          "answer": 3,
+          "explanation": "佩特拉是约旦的著名古城遗址。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "In which country is the ancient city of Petra?",
+          "options": [
+            "Egypt",
+            "Greece",
+            "Lebanon",
+            "Jordan"
+          ],
+          "answer": 3,
+          "explanation": "Petra is an archaeological city in Jordan.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-016",
+      "topic": "heritage",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/668/"
+      ],
+      "sourceFact": "Angkor is in Cambodia.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "吴哥古迹位于哪个国家？",
+          "options": [
+            "柬埔寨",
+            "泰国",
+            "越南",
+            "老挝"
+          ],
+          "answer": 0,
+          "explanation": "吴哥古迹位于柬埔寨暹粒地区。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "In which country is Angkor?",
+          "options": [
+            "Cambodia",
+            "Thailand",
+            "Viet Nam",
+            "Laos"
+          ],
+          "answer": 0,
+          "explanation": "Angkor is in Cambodia’s Siem Reap region.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-017",
+      "topic": "heritage",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/86/"
+      ],
+      "sourceFact": "The pyramid fields at Giza are in Egypt.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "吉萨金字塔群位于哪个国家？",
+          "options": [
+            "苏丹",
+            "埃及",
+            "摩洛哥",
+            "突尼斯"
+          ],
+          "answer": 1,
+          "explanation": "吉萨金字塔群位于埃及。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "In which country are the pyramids of Giza?",
+          "options": [
+            "Sudan",
+            "Egypt",
+            "Morocco",
+            "Tunisia"
+          ],
+          "answer": 1,
+          "explanation": "The pyramids of Giza are in Egypt.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-018",
+      "topic": "heritage",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/1/"
+      ],
+      "sourceFact": "The Galápagos Islands belong to Ecuador.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "加拉帕戈斯群岛属于哪个国家？",
+          "options": [
+            "秘鲁",
+            "哥伦比亚",
+            "厄瓜多尔",
+            "哥斯达黎加"
+          ],
+          "answer": 2,
+          "explanation": "加拉帕戈斯群岛是厄瓜多尔的一部分。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "Which country includes the Galápagos Islands?",
+          "options": [
+            "Peru",
+            "Colombia",
+            "Ecuador",
+            "Costa Rica"
+          ],
+          "answer": 2,
+          "explanation": "The Galápagos Islands are part of Ecuador.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-019",
+      "topic": "heritage",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/373"
+      ],
+      "sourceFact": "Stonehenge is in the United Kingdom.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "巨石阵位于哪个国家？",
+          "options": [
+            "法国",
+            "爱尔兰",
+            "丹麦",
+            "英国"
+          ],
+          "answer": 3,
+          "explanation": "巨石阵位于英国的英格兰地区。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "In which country is Stonehenge?",
+          "options": [
+            "France",
+            "Ireland",
+            "Denmark",
+            "United Kingdom"
+          ],
+          "answer": 3,
+          "explanation": "Stonehenge is in England, within the United Kingdom.",
+          "readingMillis": 15000
+        }
+      }
+    },
+    {
+      "id": "world-020",
+      "topic": "heritage",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/404/"
+      ],
+      "sourceFact": "The Acropolis of Athens is in Greece.",
+      "rightsNote": "Original question, options and explanation wording. Sources are factual references; no source images, logos, recordings or extended prose reproduced. Formal rights review pending.",
+      "locales": {
+        "zh-CN": {
+          "text": "雅典卫城位于哪个国家？",
+          "options": [
+            "希腊",
+            "意大利",
+            "克罗地亚",
+            "保加利亚"
+          ],
+          "answer": 0,
+          "explanation": "雅典卫城位于希腊首都雅典。",
+          "readingMillis": 15000
+        },
+        "en": {
+          "text": "In which country is the Acropolis of Athens?",
+          "options": [
+            "Greece",
+            "Italy",
+            "Croatia",
+            "Bulgaria"
+          ],
+          "answer": 0,
+          "explanation": "The Acropolis stands in Athens, Greece.",
+          "readingMillis": 15000
+        }
+      }
+    }
+  ]
+}

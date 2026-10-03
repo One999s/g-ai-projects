@@ -116,6 +116,8 @@ def main():
     shutil.copytree(PROJECT / 'frontend/dist', output / 'frontend')
     shutil.copytree(PROJECT / 'deploy', output / 'deploy')
     shutil.copytree(PROJECT / 'docs', output / 'docs')
+    if (PROJECT / 'content').is_dir():
+        shutil.copytree(PROJECT / 'content', output / 'content')
     shutil.copy2(PROJECT / 'README.md', output / 'README.md')
     with tempfile.TemporaryFile() as tar:
         subprocess.run(['git', 'archive', '--format=tar', commit, '--', *relevant], cwd=ROOT,

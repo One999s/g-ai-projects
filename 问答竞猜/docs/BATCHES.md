@@ -88,3 +88,10 @@
 - CI须前端/后端/真实MySQL/真实Redis全部成功后才构建并保存14天artifact，源码继续保存在Git；产物收据明确跳过项不能算通过
 - RUNBOOK明确原身份adapter依赖、独立schema owner/共享锁/history、运行权限、Redis ACL、机密配置、数据版本和回退停止条件
 - 本地5条打包工具测试通过；候选JAR的实际loopback HTTP与缺shared-db目标安全启动检查已通过。完整两次干净构建/正式收据在本批提交后执行，结果以对应CI及产物receipt为准，不预先声称可复现检查已通过
+
+## B11 · 双语公开候选与离线英文音频
+- 20道中英配对候选，NASA/NOAA/BIPM/UNESCO官方来源事实核对；严格保留draft、人工审阅pending，公开答案不得作为保密运营题池
+- 新草稿验证/导出工具：文档reviewedBy=null/时间0，不可被运行加载器批准；SQL仅draft INSERT且ROLLBACK，无DB连接、覆盖/audit写或批准开关
+- 实际生成20条英文Flite离线预览，单声道16kHz FLAC，逐项hash/文本/采样率/时长/削波与读题余量核验；7.9–12.1秒，共3,416,970音频字节
+- 中文音频未生成，listened/approved均false；未把机器测量或来源核对当真人试听/正式审批，正式音频播放与ASR仍待接入
+- 当次32条工具测试通过（音频边界单元用mock）；另外真实解码20文件通过。CI新增content-contract，发布包也携带公开内容/候选方便审阅，不自动进入游戏
