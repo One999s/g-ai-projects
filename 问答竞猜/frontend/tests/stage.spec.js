@@ -2,6 +2,7 @@ import {describe,test,expect,vi,beforeEach,afterEach} from 'vitest'
 import {mount} from '@vue/test-utils'
 import App from '../src/App.vue'
 import {questions} from '../src/questions.js'
+vi.mock('../src/audio',()=>({createStudioAudio:()=>({enable:vi.fn().mockResolvedValue(),cue:vi.fn(),close:vi.fn()})}))
 vi.mock('gsap',()=>({gsap:{fromTo:vi.fn(),killTweensOf:vi.fn()}}))
 let wrapper
 beforeEach(()=>{
@@ -27,5 +28,6 @@ describe('stage DOM interaction (not real-device visual or audio acceptance)',()
  test('fifty marks exactly two unavailable choices',async()=>{await clickText('登上舞台');await wait(2400);await clickText('50:50');expect(wrapper.findAll('.answers .eliminated')).toHaveLength(2);expect(wrapper.text()).toContain('已使用')})
  test('keyboard A–D follows the same answer flow',async()=>{await clickText('登上舞台');await wait(2400);window.dispatchEvent(new KeyboardEvent('keydown',{key:'ABCD'[correct()],bubbles:true}));await wrapper.vm.$nextTick();expect(wrapper.find('.reveal').exists()).toBe(true)})
  test('narration gate is released only on completion and stale callbacks are ignored',async()=>{await clickText('登上舞台');await wrapper.find('input[type=checkbox]').setValue(true);const first=window.speechSynthesis.speak.mock.calls[0][0];await wait(3000);expect(wrapper.find('.answers button').attributes('disabled')).toBeDefined();first.onend();await wait(500);expect(wrapper.find('.answers button').attributes('disabled')).toBeUndefined();await clickText('离开本局');await clickText('登上舞台');first.onend();await wait(3000);expect(wrapper.find('.answers button').attributes('disabled')).toBeDefined()})
+ test('global mute cancels narration and releases reading lock',async()=>{await clickText('声音关');await clickText('登上舞台');await wrapper.find('input[type=checkbox]').setValue(true);await clickText('声音开');expect(window.speechSynthesis.cancel).toHaveBeenCalled();expect(wrapper.find('input[type=checkbox]').element.checked).toBe(false);await wait(500);expect(wrapper.find('.answers button').attributes('disabled')).toBeUndefined()})
  test('reduced motion control adds explicit no-animation class',async()=>{const button=wrapper.find('button[title="减少动画"]');await button.trigger('click');expect(wrapper.find('.quiet-motion').exists()).toBe(true)})
 })
