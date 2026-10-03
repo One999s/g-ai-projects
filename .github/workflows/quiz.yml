@@ -105,3 +105,33 @@ jobs:
         env:
           MAVEN_OPTS: '-Xmx256m -XX:ActiveProcessorCount=2'
           QUIZ_REDIS_INTEGRATION: 'true'
+  release-bundle:
+    needs: [frontend, backend, mysql-contract, redis-contract]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: 问答竞猜/frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: 问答竞猜/backend/pom.xml
+      - run: python3 -m unittest discover -s 问答竞猜/tools -p 'test_*.py' -v
+      - run: python3 问答竞猜/tools/build_release.py
+        env:
+          MAVEN_OPTS: '-Xmx256m -XX:ActiveProcessorCount=2'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quiz-release-${{ github.sha }}
+          path: 问答竞猜/.release/*
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          include-hidden-files: true

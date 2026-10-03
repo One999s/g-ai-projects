@@ -81,3 +81,10 @@
 - 当次本地后端137发现=87通过+50外部服务跳过（MySQL40、Redis10），零失败/错误；实际服务结果必须等本提交对应CI，不把mock或编译算作实Redis通过
 - 原V001精确SHA仍9129c52f44988c69bc3f7f3e7524b249c8cceeb912950160cd06b989491883e7；原身份和生产数据未接触
 - Redis重启/淘汰会重置额度窗口，需部署运维策略；本配额不是现金风控或代理层慢请求防护，详见REDIS-ADMISSION.md
+
+## B10 · 可复现产物与部署契约
+- 增加只接受干净已提交源码的发布脚本，记录commit/tree/输入与产物hash；JAR两次clean构建比较、前端两次构建比较，测试身份/测试依赖排除检查
+- 新packaged loopback smoke清理环境，不读取真实配置；验证默认身份拒绝先于JSON及缺shared-db目标启动失败
+- CI须前端/后端/真实MySQL/真实Redis全部成功后才构建并保存14天artifact，源码继续保存在Git；产物收据明确跳过项不能算通过
+- RUNBOOK明确原身份adapter依赖、独立schema owner/共享锁/history、运行权限、Redis ACL、机密配置、数据版本和回退停止条件
+- 本地5条打包工具测试通过；候选JAR的实际loopback HTTP与缺shared-db目标安全启动检查已通过。完整两次干净构建/正式收据在本批提交后执行，结果以对应CI及产物receipt为准，不预先声称可复现检查已通过

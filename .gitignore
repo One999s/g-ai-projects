@@ -10,3 +10,4 @@ target/
 *.class
 __pycache__/
 .attach_pid*
+.release/

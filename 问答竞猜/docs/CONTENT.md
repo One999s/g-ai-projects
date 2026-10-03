@@ -6,7 +6,7 @@
 
 ## B06 已审核文本题包读取
 
-ApprovedQuestionBank只读quiz_question_packs/quiz_question_audit。在同一SQL语句中查找当前语言、有效时间内、approved状态、与审核人/内容hash/批准时间完全对应的审批事件。选取时刻是内容选择的时间边界；已被选中的不可变快照可继续使用，退役后新选择被阻止。最终HTTP开局流程尚未集成，不宣称已经处理所有发布并发流程。
+ApprovedQuestionBank只读quiz_question_packs/quiz_question_audit。在同一SQL语句中查找当前语言、有效时间内、approved状态、与审核人/内容hash/批准时间完全对应的审批事件。选取时刻是内容选择的时间边界；已被选中的不可变快照可继续使用，退役后新选择被阻止。B07已将选择与会话创建纳入同一外层事务；相同幂等键重放原快照，退役后不改写既有会话。
 
 数据库先排除超过256KiB的JSON，再复核精确UTF-8 SHA256。文本包schemaVersion=2（与会话信封版本独立），questions必须5–500条，ID唯一、语言一致、四个不同选项、唯一有效答案。每条需sources（HTTPS、无URL用户名密码）、rightsNote、reviewedBy及不晚于批准时间的reviewedAtMillis。原子审批身份仍由真实运营流程负责；这些字段检查不是事实/许可审核本身。
 
