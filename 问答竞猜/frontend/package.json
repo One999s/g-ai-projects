@@ -1,0 +1,1 @@
+{"name":"quiz-challenge-stage","version":"0.1.0","private":true,"type":"module","scripts":{"dev":"vite --host 127.0.0.1","build":"vite build","test":"node --test tests/*.test.js"},"dependencies":{"vue":"3.5.43","gsap":"3.15.0"},"devDependencies":{"vite":"6.4.3","@vitejs/plugin-vue":"5.2.4"}}

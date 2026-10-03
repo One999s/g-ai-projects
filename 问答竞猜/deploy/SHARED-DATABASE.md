@@ -1,0 +1,7 @@
+# 共库边界
+
+AI中台与Quiz使用同一个明确选择的逻辑MySQL库，但不意味着已获准连接原生产实例。运行账号各自最小权限。现阶段服务不连接数据库，迁移文件不自动执行。
+
+Quiz只拥有六张quiz_*表。V001是从AI中台远端fixture恢复的原始文件，SHA256 9129c52f44988c69bc3f7f3e7524b249c8cceeb912950160cd06b989491883e7。它不是原身份DDL，不创建/修改用户、sites、team或钱包表。
+
+部署迁移由独立owner串行执行，统一锁shared_apps_schema_migration，独立ai_hub_schema_history/quiz_schema_history。禁止运行时DDL、自动baseline/clean/repair。真实DDL未知前不添加身份FK。正式连接工厂、URL白名单与首连前保护将在数据库实现批次重测，而非声称旧版本保护已经存在。
