@@ -77,3 +77,31 @@ jobs:
           QUIZ_MYSQL_INTEGRATION: 'true'
           QUIZ_IT_MYSQL_USER: root
           QUIZ_IT_MYSQL_PASSWORD: quiz-ci-disposable-only
+  redis-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      redis:
+        image: redis:7.4
+        ports:
+          - 16379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=12
+    defaults:
+      run:
+        working-directory: 问答竞猜/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: 问答竞猜/backend/pom.xml
+      - run: mvn -B -ntp '-Dtest=RedisQuotaIntegrationTest' -DforkCount=1 '-DargLine=-Xmx256m -XX:ActiveProcessorCount=2' test
+        env:
+          MAVEN_OPTS: '-Xmx256m -XX:ActiveProcessorCount=2'
+          QUIZ_REDIS_INTEGRATION: 'true'

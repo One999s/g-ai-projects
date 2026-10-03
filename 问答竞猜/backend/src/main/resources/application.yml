@@ -28,3 +28,6 @@ spring:
   sql:
     init:
       mode: never
+quiz:
+  redis:
+    enabled: ${QUIZ_REDIS_ENABLED:false}

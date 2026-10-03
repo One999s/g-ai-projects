@@ -2,9 +2,9 @@
 
 Java21 / Spring Boot3.5.16. Run `mvn test` with a complete JDK21 and Maven.
 
-GET `/api/quiz/status` explicitly reports productionReady=false. Business paths default to HTTP503 IDENTITY_ADAPTER_NOT_CONFIGURED before body parsing. No user registration, fabricated token, trusted ID header or demo principal is provided. Even an added adapter cannot enable business traffic until the durable runtime is integrated.
+GET `/api/quiz/status` explicitly reports productionReady=false. Business paths default to HTTP503 IDENTITY_ADAPTER_NOT_CONFIGURED before body parsing. No user registration, fabricated token, trusted ID header or demo principal is provided. An added identity adapter also requires the explicit shared-db runtime, an approved pack and enabled healthy Redis admission.
 
-`core/GameRules` is a pure server-time aggregate mutation layer, not a complete API service. Every eventual read/mutation must first verify the original identity scope, then load/lock within a MySQL transaction. Use an explicit redacted view; never serialize GameSession/Question. The clock must be server-controlled. JDBC仓储见B05；schema-owner生产迁移工具、Redis、已审核题库和正式HTTP业务接口仍待实现。
+`core/GameRules` is the pure server-time aggregate layer behind GameService and the authoritative HTTP controllers. Reads/mutations verify the original identity scope and lock inside MySQL transactions. Only redacted views leave the service; GameSession/Question are never public API bodies. Reviewed production schema migration and real identity integration remain external gates.
 
 Fresh batch03: 18 passing tests. These are rule and MockMvc tests, not MySQL/Redis or full production identity tests. The restored V001 is never automatically applied.
 
@@ -26,6 +26,12 @@ ApprovedQuestionBank joins eligibility and matching approval evidence in one SQL
 
 ## B07 authoritative HTTP
 
-Session APIs, atomic start/replay, transaction authorization rechecks and the source JavaScript transport are implemented; see docs/API.md. Original identity and distributed quota implementations are still mandatory and absent by default, so production traffic remains fail-closed. Node20+ is additionally required by the actual source-client HTTP integration test; CI pins Node24.
+Session APIs, atomic start/replay, transaction authorization rechecks and the source JavaScript transport are implemented; see docs/API.md. Original identity and enabled distributed quota are mandatory; identity remains absent and Redis remains disabled by default, so production traffic remains fail-closed. Node20+ is additionally required by the actual source-client HTTP integration test; CI pins Node24.
 
 Session storage is now schemaVersion3 (bounded loadingDeadline), replacing the experimental version2 reader without automatic conversion. Existing incompatible bytes are preserved and rejected. This is a data compatibility gate, not a live migration.
+
+## B09 distributed Redis admission
+
+Explicit opt-in creates a controlled Lettuce connection and Redis-backed RequestQuota. No Spring Redis URL/property binding, local-counter fallback or default external destination exists. See deploy/REDIS-ADMISSION.md for settings, finite resource limits, ACL boundary and restart/eviction limitations.
+
+`QUIZ_REDIS_INTEGRATION=true` only connects to disposable127.0.0.1:16379 for actual-engine contracts. Its synthetic ACL fixture is removed in finally. Never forward the fixture endpoint to a real service. CI has its own Redis7.4 service; default tests skip these contracts rather than pretend they ran.
