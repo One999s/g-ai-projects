@@ -149,6 +149,7 @@ jobs:
           fi
       - run: python3 -m unittest discover -s 问答竞猜/tools -p 'test_*.py' -v
       - run: python3 问答竞猜/tools/content_candidates.py 问答竞猜/content/candidates/world-foundations-r1.json
+      - run: python3 问答竞猜/tools/content_review.py 问答竞猜/content/candidates/world-foundations-r1.json 问答竞猜/content/reviews/world-foundations-r1.assistant.json
       - run: python3 问答竞猜/tools/audio_candidates.py 问答竞猜/content/candidates/world-foundations-r1.json 问答竞猜/content/audio-candidates/world-foundations-en-r1 --verify
 
   speech-contract:

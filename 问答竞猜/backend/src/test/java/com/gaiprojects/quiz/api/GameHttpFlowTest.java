@@ -6,10 +6,13 @@ import com.fasterxml.jackson.databind.*;
 import com.gaiprojects.quiz.QuizApplication;
 import com.gaiprojects.quiz.core.*;
 import com.gaiprojects.quiz.identity.ExistingIdentityAdapter;
+import com.gaiprojects.quiz.narration.NarrationBank;
 import com.gaiprojects.quiz.service.GameService;
 import com.gaiprojects.quiz.speech.*;
 import com.gaiprojects.quiz.store.*;
+import java.nio.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -77,6 +80,55 @@ class GameHttpFlowTest {
   @Profile("test")
   static class Fixtures {
     @Bean
+    NarrationBank fixtureNarration() throws Exception {
+      // Synthetic silent fixture, not evidence that any shipped audio was listened to.
+      Path dir = Files.createTempDirectory("quiz-narration-fixture-");
+      var b = ByteBuffer.allocate(32044).order(ByteOrder.LITTLE_ENDIAN);
+      b.putInt(0x46464952)
+          .putInt(32036)
+          .putInt(0x45564157)
+          .putInt(0x20746d66)
+          .putInt(16)
+          .putShort((short) 1)
+          .putShort((short) 1)
+          .putInt(16000)
+          .putInt(32000)
+          .putShort((short) 2)
+          .putShort((short) 16)
+          .putInt(0x61746164)
+          .putInt(32000);
+      byte[] wave = b.array();
+      String sha = NarrationBank.sha(wave);
+      var entries = new ArrayList<NarrationBank.Entry>();
+      for (int i = 0; i < 5; i++)
+        entries.add(
+            new NarrationBank.Entry(
+                "HTTP_TEST_ONLY",
+                "http-test-" + i,
+                "en",
+                "SYNTHETIC TEST QUESTION",
+                List.of("A", "B", "C", "D"),
+                2000,
+                sha,
+                1000,
+                true,
+                "TEST_FIXTURE_ONLY",
+                NOW - 2000,
+                "Synthetic silent fixture, no real listening claim"));
+      byte[] manifest =
+          new ObjectMapper().writeValueAsBytes(new NarrationBank.Manifest(1, entries));
+      try {
+        Files.write(dir.resolve(sha + ".wav"), wave);
+        Files.write(dir.resolve("manifest.json"), manifest);
+        return new NarrationBank(dir, NarrationBank.sha(manifest), NOW);
+      } finally {
+        Files.deleteIfExists(dir.resolve(sha + ".wav"));
+        Files.deleteIfExists(dir.resolve("manifest.json"));
+        Files.deleteIfExists(dir);
+      }
+    }
+
+    @Bean
     SpeechState fixtureSpeech() {
       return new SpeechState();
     }
@@ -132,7 +184,7 @@ class GameHttpFlowTest {
                     List.of("A", "B", "C", "D"),
                     2,
                     "SYNTHETIC TEST EXPLANATION",
-                    1000),
+                    2000),
                 List.of("https://science.nasa.gov/"),
                 "Synthetic test only; not commercial approval",
                 "TEST_ONLY",
@@ -570,5 +622,59 @@ class GameHttpFlowTest {
         data(request("/api/quiz/me/capabilities", HttpMethod.GET, null, "owner"))
             .get("voiceCandidateConfigured")
             .asBoolean());
+  }
+
+  @Test
+  void narrationHttpIsScopedBoundedAndDoesNotScore() throws Exception {
+    var s = create("narration-" + UUID.randomUUID());
+    String path = roundPath(s) + "/narration";
+    var m = data(request(path, HttpMethod.GET, null, "owner"));
+    assertTrue(m.get("available").asBoolean());
+    assertEquals(32044, m.get("byteLength").asInt());
+    assertFalse(m.has("answer"));
+    assertFalse(m.has("questionId"));
+    assertFalse(m.has("bankVersion"));
+    var headers = new HttpHeaders();
+    headers.set("X-Test-Actor", "owner");
+    var wav =
+        http.exchange(
+            "http://127.0.0.1:" + port + path + "/audio",
+            HttpMethod.GET,
+            new HttpEntity<>(headers),
+            byte[].class);
+    assertEquals(200, wav.getStatusCode().value());
+    assertEquals(32044, wav.getBody().length);
+    assertEquals(m.get("sha256").asText(), NarrationBank.sha(wav.getBody()));
+    assertEquals("no-store", wav.getHeaders().getCacheControl());
+    assertEquals(404, request(path, HttpMethod.GET, null, "other-site").getStatusCode().value());
+    assertEquals(
+        404, request(path + "/audio", HttpMethod.GET, null, "other-user").getStatusCode().value());
+    assertEquals(
+        409,
+        request(
+                path.replace(s.get("roundId").asText(), UUID.randomUUID().toString()),
+                HttpMethod.GET,
+                null,
+                "owner")
+            .getStatusCode()
+            .value());
+    var ready = data(request(roundPath(s) + "/ready", HttpMethod.POST, null, "owner"));
+    assertEquals(0, ready.get("score").asInt());
+    assertTrue(data(request(path, HttpMethod.GET, null, "owner")).get("available").asBoolean());
+    clock.value.set(ready.get("opensAt").asLong());
+    assertEquals(
+        409, request(path + "/audio", HttpMethod.GET, null, "owner").getStatusCode().value());
+  }
+
+  @Test
+  void narrationHttpRechecksIdentityAndRejectsExpiredLoading() throws Exception {
+    var s = create("narration-closed-" + UUID.randomUUID());
+    String path = roundPath(s) + "/narration";
+    auth.expireDuringQuota = true;
+    assertEquals(401, request(path, HttpMethod.GET, null, "owner").getStatusCode().value());
+    auth.expireDuringQuota = false;
+    auth.until.set(Long.MAX_VALUE);
+    clock.value.set(s.get("loadingDeadline").asLong());
+    assertEquals(409, request(path, HttpMethod.GET, null, "owner").getStatusCode().value());
   }
 }

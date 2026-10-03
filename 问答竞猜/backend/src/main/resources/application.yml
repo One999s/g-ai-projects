@@ -33,3 +33,5 @@ quiz:
     enabled: ${QUIZ_REDIS_ENABLED:false}
   asr:
     enabled: ${QUIZ_ASR_ENABLED:false}
+  narration:
+    enabled: ${QUIZ_NARRATION_ENABLED:false}

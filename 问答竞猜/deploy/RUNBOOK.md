@@ -66,3 +66,7 @@ QUIZ_ASR_ENABLED默认false。明确启用时，QUIZ_ASR_URL只接受http://127.
 配置成功不等于真实识别、隐私或设备验收成功。当前仅固定合成英文样本完成过功能检查，中文、实际麦克风、真实身份和完整网络观测仍未通过。ASR不可用时返回503，正常键盘/点击答题不需要它。语音候选绝不直接计分。
 
 交付脚本现在仅从已跟踪输入复制deploy/docs/content/speech-worker，避免把被Git忽略的本地.env、模型或缓存扫入包；前端也拒绝隐藏文件、符号链接和未知文件类型。不要把跟踪或打包原凭据当成合法机密注入方式。
+
+## 可选审核旁白
+
+QUIZ_NARRATION_ENABLED默认false；启用需明确QUIZ_NARRATION_DIRECTORY和QUIZ_NARRATION_MANIFEST_SHA256。只接受已真实试听审阅的规范本地WAV与精确问题/选项/版本绑定，启动加载后不访问外网或文件系统。未提供正式审核音频；B11的FLAC是未试听候选。配置格式、32MiB内存上限与授权读取/服务器读题时钟见../docs/NARRATION.md。

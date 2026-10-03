@@ -50,7 +50,7 @@ class ReleaseReceiptTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = pathlib.Path(tmp) / 'app.jar'
             with zipfile.ZipFile(path, 'w') as jar:
-                for name in ['QuizApplication', 'api/IdentityAdmission', 'quota/RedisRequestQuota', 'speech/VoiceService']:
+                for name in ['QuizApplication', 'api/IdentityAdmission', 'quota/RedisRequestQuota', 'speech/VoiceService', 'narration/NarrationBank', 'api/NarrationController']:
                     jar.writestr('BOOT-INF/classes/com/gaiprojects/quiz/' + name + '.class', b'fixture-free')
             self.assertTrue(release.inspect_jar(path)['testFixturesAbsent'])
 

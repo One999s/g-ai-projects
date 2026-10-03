@@ -1,0 +1,235 @@
+{
+  "reviewSchemaVersion": 1,
+  "candidateSha256": "8c7e21216889069f496b47b95ea5992a8ba90a0388f6e143a8fde3015fbfa434",
+  "reviewedBy": "assistant:source-and-bilingual-review",
+  "reviewedAt": "2026-10-03T14:11:00Z",
+  "reviewKind": "assistant",
+  "factReview": "passed",
+  "translationReview": "passed",
+  "wordingReview": "original-factual-prompts-no-source-media",
+  "audioListened": false,
+  "deploymentApproved": false,
+  "publicAnswersVisible": true,
+  "questions": [
+    {
+      "id": "world-001",
+      "questionSha256": "8bf4e0820e540f03bd72d4278a7efe59054ebebca60912424a160375b0a8f7d1",
+      "sourceUrls": [
+        "https://science.nasa.gov/jupiter/jupiter-facts/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Jupiter is the largest planet in the Solar System.",
+      "bilingualFinding": "Largest refers to planetary size, consistent in both languages.",
+      "result": "passed"
+    },
+    {
+      "id": "world-002",
+      "questionSha256": "fa8c91ac550fa317b8eaa51feaa2c1e3b0741e1d5e32cb635a66aa91cd442fa6",
+      "sourceUrls": [
+        "https://science.nasa.gov/earth/facts/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Earth is the third planet from the Sun.",
+      "bilingualFinding": "Outward ordinal and Mercury/Venus explanation match.",
+      "result": "passed"
+    },
+    {
+      "id": "world-003",
+      "questionSha256": "dffa202df8602f506ae7eccf9b8d0a08dc5702ba72fce7f39f5d8cd0947a3dcf",
+      "sourceUrls": [
+        "https://science.nasa.gov/earth/facts/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Nitrogen is the largest component of Earth’s near-surface atmosphere.",
+      "bilingualFinding": "Near-surface qualifier retained; nitrogen about 78 percent.",
+      "result": "passed"
+    },
+    {
+      "id": "world-004",
+      "questionSha256": "8b3d26f4c07ad5a5af3f13db6e8245c72f97c1944678e4f5e2a17d0a4386a0a4",
+      "sourceUrls": [
+        "https://science.nasa.gov/mars/facts/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Oxidized iron in Martian material contributes to its reddish appearance.",
+      "bilingualFinding": "Red appearance linked to oxidized iron, not every surface color.",
+      "result": "passed"
+    },
+    {
+      "id": "world-005",
+      "questionSha256": "cea8cac4b726162536d5f4d76b0edd26d4da1700eefb47f9c9038f0320ef6b7c",
+      "sourceUrls": [
+        "https://science.nasa.gov/saturn/moons/titan/facts/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Titan is Saturn’s largest moon.",
+      "bilingualFinding": "Titan belongs to Saturn; Chinese 土卫六 is an intentional easy clue.",
+      "result": "passed"
+    },
+    {
+      "id": "world-006",
+      "questionSha256": "4987475e784e137fb7ee77d9b8c8494ac7bd0fc60489f0576649c945249d509e",
+      "sourceUrls": [
+        "https://science.nasa.gov/sun/facts/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The Sun is the Solar System’s only star.",
+      "bilingualFinding": "Scope is our Solar System, not the universe.",
+      "result": "passed"
+    },
+    {
+      "id": "world-007",
+      "questionSha256": "a475e3412277d8649255d362019f0c6040ce0a5c4ebc225be9159be2e97a5917",
+      "sourceUrls": [
+        "https://oceanservice.noaa.gov/facts/biggestocean.html?no_redirect=true"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The Pacific is the largest ocean basin.",
+      "bilingualFinding": "Largest refers to basin area; no changing depth number.",
+      "result": "passed"
+    },
+    {
+      "id": "world-008",
+      "questionSha256": "9fccb3f8126e820dba3de8d44b9fd8ea1cb0ba0514aa688e29e8738aa7f03981",
+      "sourceUrls": [
+        "https://oceanexplorer.noaa.gov/ocean-fact/ocean-depth/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Challenger Deep is in the Mariana Trench.",
+      "bilingualFinding": "Location only; no disputed maximum-depth numeric claim.",
+      "result": "passed"
+    },
+    {
+      "id": "world-009",
+      "questionSha256": "028c7a84d9c9bf94130014958cc81435e6a0073d9f00403922acc9a92e7fbd4b",
+      "sourceUrls": [
+        "https://www.bipm.org/en/measurement-units/si-base-units"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The SI base unit of electric current is the ampere.",
+      "bilingualFinding": "Electric current, ampere and A agree.",
+      "result": "passed"
+    },
+    {
+      "id": "world-010",
+      "questionSha256": "745637e94daec473aebc6c3d0cd4a289d319a316d57cc087fdd2c88224cda89b",
+      "sourceUrls": [
+        "https://www.bipm.org/en/measurement-units/si-base-units"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The SI base unit of amount of substance is the mole.",
+      "bilingualFinding": "Amount of substance, mole and mol agree.",
+      "result": "passed"
+    },
+    {
+      "id": "world-011",
+      "questionSha256": "11027ce9db41bb3a6b634448eee95ef5640f00673402cfe49271ce8acfabfc08",
+      "sourceUrls": [
+        "https://www.bipm.org/en/measurement-units/si-base-units"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The SI base unit of thermodynamic temperature is the kelvin.",
+      "bilingualFinding": "Thermodynamic temperature rather than Celsius scale.",
+      "result": "passed"
+    },
+    {
+      "id": "world-012",
+      "questionSha256": "6ef311f56afcf7c93e34815225b9b754e2cca135d82b3bdbc059e411f50ec144",
+      "sourceUrls": [
+        "https://www.bipm.org/en/measurement-units/si-base-units"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The SI base unit of length is the metre.",
+      "bilingualFinding": "SI base length unit, metre/meter translation 米.",
+      "result": "passed"
+    },
+    {
+      "id": "world-013",
+      "questionSha256": "91436b642b6172f31675dd4ed4b0fbe06701c8e5edd19dcc4271ac0c79326ff5",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/252/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The Taj Mahal is in India.",
+      "bilingualFinding": "Country and Agra explanation agree.",
+      "result": "passed"
+    },
+    {
+      "id": "world-014",
+      "questionSha256": "91c4887bc0662bff4f6503cfd08f4869e87ff8d159135b6827aec625b77b831c",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/274"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Machu Picchu is in Peru.",
+      "bilingualFinding": "Peru and Andes location agree.",
+      "result": "passed"
+    },
+    {
+      "id": "world-015",
+      "questionSha256": "8b8c833e2acc7c1fa93e93b90e5bf9c0df3bd4c0fa647f4a53775256a2c0b65f",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/326"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Petra is in Jordan.",
+      "bilingualFinding": "Jordan country assignment agrees.",
+      "result": "passed"
+    },
+    {
+      "id": "world-016",
+      "questionSha256": "09921ff74ff1837cfebd2c749651ba8d66904c2406b981cd97183cfda94f0638",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/668/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Angkor is in Cambodia.",
+      "bilingualFinding": "Cambodia and Siem Reap region agree.",
+      "result": "passed"
+    },
+    {
+      "id": "world-017",
+      "questionSha256": "6dd06cc7cf36db75bae7e1ebdd12e1520d8c61bb4e2397d041b339fc8027809c",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/86/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The pyramid fields at Giza are in Egypt.",
+      "bilingualFinding": "Giza pyramid fields in Egypt agree.",
+      "result": "passed"
+    },
+    {
+      "id": "world-018",
+      "questionSha256": "7addc01a17856c28b17aaa188a6d8e263106a1cb3ab1ef1a2d23a83e4e2bdccf",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/1/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The Galápagos Islands belong to Ecuador.",
+      "bilingualFinding": "UNESCO country field Ecuador; both versions ask national location.",
+      "result": "passed"
+    },
+    {
+      "id": "world-019",
+      "questionSha256": "0bac3346d47a938a41a6d4aa0d5880b963aeaf9ddda452e0934aa198e345f5a8",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/373"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "Stonehenge is in the United Kingdom.",
+      "bilingualFinding": "Country United Kingdom; explanation distinguishes England.",
+      "result": "passed"
+    },
+    {
+      "id": "world-020",
+      "questionSha256": "87d3dee8521a689df3d6b37045a413eea7ba02e844f4b241c84e1dcb3f19ace4",
+      "sourceUrls": [
+        "https://whc.unesco.org/en/list/404/"
+      ],
+      "sourceCheckedOn": "2026-10-03",
+      "factFinding": "The Acropolis of Athens is in Greece.",
+      "bilingualFinding": "Athens, Greece country assignment agrees.",
+      "result": "passed"
+    }
+  ]
+}

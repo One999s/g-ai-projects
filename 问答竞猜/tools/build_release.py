@@ -43,7 +43,9 @@ def inspect_jar(path):
         required = ['BOOT-INF/classes/com/gaiprojects/quiz/QuizApplication.class',
                     'BOOT-INF/classes/com/gaiprojects/quiz/api/IdentityAdmission.class',
                     'BOOT-INF/classes/com/gaiprojects/quiz/quota/RedisRequestQuota.class',
-                    'BOOT-INF/classes/com/gaiprojects/quiz/speech/VoiceService.class']
+                    'BOOT-INF/classes/com/gaiprojects/quiz/speech/VoiceService.class',
+                    'BOOT-INF/classes/com/gaiprojects/quiz/narration/NarrationBank.class',
+                    'BOOT-INF/classes/com/gaiprojects/quiz/api/NarrationController.class']
         if any(n not in names for n in required):
             raise RuntimeError('Required runtime protection missing from JAR')
         return {'runtimeClassesAndResources': len(classes), 'testFixturesAbsent': True,

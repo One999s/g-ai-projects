@@ -45,6 +45,30 @@ public final class GameService {
     return locked(a, id, s -> rules.view(s, a.player(), clock.millis()));
   }
 
+  /**
+   * Internal only: never serialize the server Question. Fetching narration does not extend clocks.
+   */
+  public record NarrationWindow(
+      String bankVersion, Question question, String phase, long serverNow, long expiresAt) {}
+
+  public NarrationWindow narrationWindow(VerifiedAccess a, String id, String round) {
+    return locked(
+        a,
+        id,
+        s -> {
+          var view = rules.view(s, a.player(), clock.millis());
+          if (!view.roundId().equals(round)
+              || !List.of("LOADING", "READING").contains(view.phase()))
+            throw new RuleException("NARRATION_WINDOW_CLOSED", 409);
+          return new NarrationWindow(
+              s.bankVersion,
+              s.questions.get(s.index),
+              view.phase(),
+              view.serverNow(),
+              view.phase().equals("LOADING") ? view.loadingDeadline() : view.opensAt());
+        });
+  }
+
   public GameRules.SessionView ready(VerifiedAccess a, String id, String round) {
     return locked(
         a,
