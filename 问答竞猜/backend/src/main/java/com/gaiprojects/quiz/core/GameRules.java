@@ -178,6 +178,7 @@ public final class GameRules {
     tick(s, now);
     Question q = s.questions.get(s.index);
     GameSession.Result result = s.results.size() > s.index ? s.results.get(s.index) : null;
+    boolean hidden = Set.of("LOADING", "ABANDONED").contains(s.phase);
     return new SessionView(
         s.id,
         s.roundIds.get(s.index),
@@ -192,10 +193,10 @@ public final class GameRules {
         s.score,
         s.streak,
         s.lifelineUsed,
-        q.text(),
-        q.options(),
-        Set.copyOf(s.eliminated),
-        result);
+        hidden ? null : q.text(),
+        hidden ? List.of() : q.options(),
+        hidden ? Set.of() : Set.copyOf(s.eliminated),
+        hidden ? null : result);
   }
 
   /**

@@ -57,15 +57,14 @@ public final class GameService {
         id,
         s -> {
           var view = rules.view(s, a.player(), clock.millis());
-          if (!view.roundId().equals(round)
-              || !List.of("LOADING", "READING").contains(view.phase()))
+          if (!view.roundId().equals(round) || !view.phase().equals("READING"))
             throw new RuleException("NARRATION_WINDOW_CLOSED", 409);
           return new NarrationWindow(
               s.bankVersion,
               s.questions.get(s.index),
               view.phase(),
               view.serverNow(),
-              view.phase().equals("LOADING") ? view.loadingDeadline() : view.opensAt());
+              view.opensAt());
         });
   }
 

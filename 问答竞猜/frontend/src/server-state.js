@@ -5,7 +5,9 @@ export function validateSnapshot(s){
  if(!s||!UUID.test(s.sessionId)||!UUID.test(s.roundId)||!['en','zh-CN'].includes(s.locale)||!['LOADING','READING','ANSWERING','REVEALING','FINISHED','ABANDONED'].includes(s.phase))bad()
  if(!Number.isSafeInteger(s.revision)||s.revision<0||!Number.isInteger(s.roundNumber)||s.roundNumber<1||s.roundNumber>5||!Number.isInteger(s.score)||s.score<0||s.score>750||!Number.isInteger(s.streak)||s.streak<0||s.streak>5)bad()
  for(const key of ['serverNow','opensAt','deadline','loadingDeadline'])if(!Number.isSafeInteger(s[key])||s[key]<0)bad()
- if(typeof s.question!=='string'||!s.question||s.question.length>1000||!Array.isArray(s.options)||s.options.length!==4||s.options.some(x=>typeof x!=='string'||!x||x.length>400))bad()
+ const hidden=['LOADING','ABANDONED'].includes(s.phase)
+ if(hidden){if(s.question!==null||!Array.isArray(s.options)||s.options.length!==0||s.reveal!==null||!Array.isArray(s.eliminated)||s.eliminated.length!==0)bad()}
+ else if(typeof s.question!=='string'||!s.question||s.question.length>1000||!Array.isArray(s.options)||s.options.length!==4||s.options.some(x=>typeof x!=='string'||!x||x.length>400))bad()
  if(!Array.isArray(s.eliminated)||s.eliminated.length>2||new Set(s.eliminated).size!==s.eliminated.length||s.eliminated.some(x=>!Number.isInteger(x)||x<0||x>3)||typeof s.lifelineUsed!=='boolean')bad()
  if(s.reveal!==null){const r=s.reveal;if(!r||r.roundId!==s.roundId||!Number.isInteger(r.correct)||r.correct<0||r.correct>3||(r.selected!==null&&(!Number.isInteger(r.selected)||r.selected<0||r.selected>3))||typeof r.explanation!=='string'||!Number.isInteger(r.awarded)||r.awarded<0||r.awarded>200)bad()}
  if(['LOADING','READING','ANSWERING'].includes(s.phase)&&s.reveal!==null)bad()

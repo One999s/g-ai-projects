@@ -40,3 +40,12 @@ B08：27 Node、24 DOM测试和双入口构建通过；另外8条实际HTTP测�
 这不撤销服务器在拒绝前已合法提交的答案，也不假设浏览器取消等于服务端回滚。重新认证后以服务器当前状态为准。它处理“已收到授权拒绝”的边界，不能代替尚未接入的真实注销/Token撤销合同。
 
 本轮先在B16代码上复现6条失败的交错响应测试，再修复并扩展为8条相关回归。最终前端54 Node+76 DOM=130通过，双入口构建成功。没有新增Java/DDL/身份实现，没有实际麦克风或浏览器设备验收声明。
+
+
+## B18 · 缓存返回与揭题边界
+
+LOADING和ABANDONED的服务器快照不含题文、选项或答案解释；Ready后进入READING才提供题文，旁白descriptor/音频也仅能在READING读取。点击Ready先在用户手势中解锁音频设备，不请求题音；收到真实揭题响应后才有限加载。完整旁白和1秒余量放不进剩余读题窗口时回退文字，绝不跳过开头或延长答题时钟。前后端须同批部署，旧协议组合会安全拒绝，数据库/state_json版本不变。
+
+修复两个已在B17代码上失败的缓存返回用例：页面离开时先同步隐藏根节点，再清空游戏/战绩/语音与所有旧异步代次，只保留opaque恢复提示；pageshow缓存恢复或重新可见后先呈现空安全状态，再请求服务器current。旧响应、重复离开与隐藏页恢复不得越过这一边界。pagehide也会停止录音，不能依赖visibilitychange或Vue卸载一定先发生。
+
+背景：[浏览器BFCache说明](https://web.dev/articles/bfcache)、[pageshow事件](https://developer.mozilla.org/en-US/docs/Web/API/Window/pageshow_event)。本批使用真实HTTP和DOM事件交错测试；没有把事件模拟当作Safari/Chrome实际缓存或麦克风验收。

@@ -208,7 +208,7 @@ class GameRulesTest {
   }
 
   @Test
-  void readyCannotBeDelayedIndefinitelyAfterQuestionDisclosure() {
+  void readyCannotBeDelayedIndefinitelyBeforeQuestionDisclosure() {
     var error = assertThrows(RuleException.class, () -> rules.ready(s, round(), s.loadingDeadline));
     assertEquals("READY_DEADLINE_PASSED", error.code);
     assertEquals("ABANDONED", s.phase);

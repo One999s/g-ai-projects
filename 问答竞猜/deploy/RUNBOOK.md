@@ -70,3 +70,8 @@ QUIZ_ASR_ENABLED默认false。明确启用时，QUIZ_ASR_URL只接受http://127.
 ## 可选审核旁白
 
 QUIZ_NARRATION_ENABLED默认false；启用需明确QUIZ_NARRATION_DIRECTORY和QUIZ_NARRATION_MANIFEST_SHA256。只接受已真实试听审阅的规范本地WAV与精确问题/选项/版本绑定，启动加载后不访问外网或文件系统。未提供正式审核音频；B11的FLAC是未试听候选。配置格式、32MiB内存上限与授权读取/服务器读题时钟见../docs/NARRATION.md。
+
+
+## B18配套部署要求
+
+本批LOADING/ABANDONED响应隐藏题文，旁白读取只允许READING。必须以同一commit的前端+JAR配套切换，不能只替换后端或继续提供缓存的旧server入口资产。旧/新混用将被快照校验拒绝。它不改DDL、存储state_json版本、身份契约或积分结算规则。

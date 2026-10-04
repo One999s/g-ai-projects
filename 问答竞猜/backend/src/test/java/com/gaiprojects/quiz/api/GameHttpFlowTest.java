@@ -108,7 +108,7 @@ class GameHttpFlowTest {
                 "en",
                 "SYNTHETIC TEST QUESTION",
                 List.of("A", "B", "C", "D"),
-                2000,
+                3000,
                 sha,
                 1000,
                 true,
@@ -184,7 +184,7 @@ class GameHttpFlowTest {
                     List.of("A", "B", "C", "D"),
                     2,
                     "SYNTHETIC TEST EXPLANATION",
-                    2000),
+                    3000),
                 List.of("https://science.nasa.gov/"),
                 "Synthetic test only; not commercial approval",
                 "TEST_ONLY",
@@ -628,6 +628,10 @@ class GameHttpFlowTest {
   void narrationHttpIsScopedBoundedAndDoesNotScore() throws Exception {
     var s = create("narration-" + UUID.randomUUID());
     String path = roundPath(s) + "/narration";
+    assertEquals(409, request(path, HttpMethod.GET, null, "owner").getStatusCode().value());
+    assertEquals(
+        409, request(path + "/audio", HttpMethod.GET, null, "owner").getStatusCode().value());
+    data(request(roundPath(s) + "/ready", HttpMethod.POST, null, "owner"));
     var m = data(request(path, HttpMethod.GET, null, "owner"));
     assertTrue(m.get("available").asBoolean());
     assertEquals(32044, m.get("byteLength").asInt());
@@ -691,5 +695,35 @@ class GameHttpFlowTest {
     auth.expireDuringQuota = true;
     assertEquals(
         401, request("/api/quiz/me/record", HttpMethod.GET, null, "owner").getStatusCode().value());
+  }
+
+  @Test
+  void unopenedAndAbandonedHttpNeverDisclosePromptOrOptions() throws Exception {
+    var s = create("hidden-" + UUID.randomUUID());
+    assertTrue(s.get("question").isNull());
+    assertEquals(0, s.get("options").size());
+    var current =
+        data(
+            request(
+                "/api/quiz/sessions/" + s.get("sessionId").asText() + "/current",
+                HttpMethod.GET,
+                null,
+                "owner"));
+    assertTrue(current.get("question").isNull());
+    var ready = data(request(roundPath(s) + "/ready", HttpMethod.POST, null, "owner"));
+    assertEquals("READING", ready.get("phase").asText());
+    assertEquals("SYNTHETIC TEST QUESTION", ready.get("question").asText());
+    assertEquals(4, ready.get("options").size());
+    assertTrue(ready.get("reveal").isNull());
+    var abandoned =
+        data(
+            request(
+                "/api/quiz/sessions/" + s.get("sessionId").asText() + "/abandon",
+                HttpMethod.POST,
+                null,
+                "owner"));
+    assertTrue(abandoned.get("question").isNull());
+    assertEquals(0, abandoned.get("options").size());
+    assertTrue(abandoned.get("reveal").isNull());
   }
 }

@@ -1,4 +1,4 @@
-# B14 · Reviewed local narration
+# Reviewed local narration · B18 reveal boundary
 
 Optional narration is disabled by default. It does not generate speech, download files, change the answer deadline, grant identity, or write scores. The repository's twenty English FLAC files remain unlistened development candidates and cannot be loaded by this runtime. No reviewed production audio bundle is supplied.
 
@@ -21,9 +21,13 @@ The reviewed manifest is an operator-supplied trust input, not a cryptographic p
 
 `GET /api/quiz/sessions/{id}/rounds/{round}/narration` returns only availability or a descriptor with current session/round, digest, byte length, duration, reading window and server timestamps. No asset path, bank identifier, future question, solution or reviewer details are exposed. Absent or unmatched bundle yields `available=false`.
 
-`GET .../narration/audio` returns the matched WAV, with no-store/nosniff. Both endpoints use existing identity, quota and Origin gates, then locked ownership/current-round checks. Allowed only while LOADING or READING; expired loading, answer phase, stale round and closed session are rejected. Binary delivery rechecks identity/window before publishing bytes. There are no public static audio routes, range requests, cross-origin redirects or provider URLs.
+`GET .../narration/audio` returns the matched WAV, with no-store/nosniff. Both endpoints use existing identity, quota and Origin gates, then locked ownership/current-round checks. Allowed only while READING, after the server has accepted Ready. LOADING, expired loading, answer phase, stale round and closed session are rejected. Neither a metadata call nor the binary route can reveal the prompt before Ready. Binary delivery rechecks identity/window before publishing bytes. There are no public static audio routes, range requests, cross-origin redirects or provider URLs.
 
-The server frontend prepares narration only when the user turns sound on and presses Ready. Preparation has a 3-second bound within the existing 15-second loading deadline. It verifies descriptor scope, byte length, SHA-256 and decoded duration, then sends ordinary Ready. Playback starts only after the accepted server READING snapshot and seeks relative to the original server reading start. Mute, hidden page, round/scope change, expiry and unmount stop playback and release memory. Duplicate or late setup results cannot extend time or answer automatically. Missing/blocked playback leaves text usable with an explicit notice. Browser autoplay, actual audio devices and listening are not validated by fake AudioContext tests.
+When the user has enabled sound and presses Ready, the frontend arms/resumes its audio device in that user gesture without requesting question audio. The server Ready response first enters READING and reveals the current prompt. Only then can the frontend request and verify narration. Preparation remains bounded to 3 seconds inside the existing reading window; no server clock is extended.
+
+The verified clip plays from its beginning only if its entire duration plus a 1-second margin still fits before answers open. Otherwise the frontend explicitly falls back to text; it never skips a late prompt prefix to force playback. Authentication/permission denial is propagated to the global session-clearing boundary rather than swallowed as an optional-audio failure. Mute, page hiding/cache navigation, round/scope change, expiry and unmount cancel audio. Browser autoplay, actual audio devices and listening are not validated by fake AudioContext tests.
+
+B18 changes the public phase contract: LOADING and ABANDONED snapshots have `question:null`, empty `options`/`eliminated` and `reveal:null`. Deploy the matching frontend and backend together. An older frontend may reject these safer snapshots; a new frontend rejects an older server that still discloses the prompt during LOADING. No stored-state or database migration is involved.
 
 ## Text review
 
