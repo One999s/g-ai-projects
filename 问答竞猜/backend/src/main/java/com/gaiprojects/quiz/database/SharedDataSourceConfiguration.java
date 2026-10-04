@@ -39,6 +39,19 @@ public class SharedDataSourceConfiguration {
   }
 
   @Bean
+  @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+      name = "quiz.content-publication.enabled",
+      havingValue = "true")
+  com.gaiprojects.quiz.content.QuestionPackPublisher questionPackPublisher(
+      DataSource ds, com.gaiprojects.quiz.store.ApprovedQuestionBank bank) {
+    return new com.gaiprojects.quiz.content.QuestionPackPublisher(
+        new JdbcTemplate(ds),
+        new TransactionTemplate(new DataSourceTransactionManager(ds)),
+        bank,
+        java.time.Clock.systemUTC());
+  }
+
+  @Bean
   static BeanPostProcessor sharedConnectionSafety(Environment env) {
     return new BeanPostProcessor() {
       @Override

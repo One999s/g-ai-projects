@@ -36,3 +36,5 @@ B22：真实本地中文答题验证发现 tiny 模型对两条固定合成句�
 B23：固定 small 模型与原两条中文失败音频已完成真实评估，可用中文候选仍0/2；第一条为繁体精确匹配缺口，第二条仍错误。small 共享单进程四请求出现2次4秒超时，默认不升级。见[模型与队列实测](docs/SMALL-ASR-EVALUATION.md)。
 
 B24：原繁体完整指令已能精确形成候选并要求确认；原两条small中文样本当前1/2可用，“答案13”仍拒绝。见[真实确认与限制](docs/TRADITIONAL-VOICE-COMMANDS.md)。按当前计划先补功能联调，暂不推进部署。
+
+B25 adds a bounded [text question-pack publication page](docs/CONTENT-PUBLICATION.md): `frontend/content.html` previews a reviewed pack and explicitly confirms an immutable, atomically audited publication. Global content permission is a separate fail-closed integration; normal player/site access cannot publish. Production identity and the global permission adapter are still external dependencies. Deployment remains paused.

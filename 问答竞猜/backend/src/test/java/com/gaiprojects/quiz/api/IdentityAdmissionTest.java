@@ -29,6 +29,17 @@ class IdentityAdmissionTest {
   }
 
   @Test
+  void contentPublicationFailsClosedWithoutOriginalIdentity() throws Exception {
+    for (String operation : java.util.List.of("preview", "publish"))
+      http.perform(
+              post("/api/quiz/content/packs/" + operation)
+                  .contentType("application/json")
+                  .content("{bad"))
+          .andExpect(status().isServiceUnavailable())
+          .andExpect(jsonPath("$.error.code").value("IDENTITY_ADAPTER_NOT_CONFIGURED"));
+  }
+
+  @Test
   void claimedClientScopeCannotCreateIdentity() throws Exception {
     http.perform(
             get("/api/quiz/sessions/00000000-0000-0000-0000-000000000000/current")

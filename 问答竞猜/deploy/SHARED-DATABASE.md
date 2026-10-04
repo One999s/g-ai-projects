@@ -19,3 +19,5 @@ B21新写state_json为schemaVersion=5信封（含可空章节合同），兼容�
 数据库权限见quiz-runtime-grants.sql.template。运行账号只访问quiz业务表，不读原身份、AI中台、团队或钱包表。部署说明只是模板，未实际创建生产账户或执行GRANT。
 
 B21在独立Quiz history追加V002，仅增quiz_chapter_progress一表，现2迁移/7表；原V001不变。章节运行权限与升级顺序详见CHAPTER-JOURNEY.md及RUNBOOK.md。
+
+B25 adds optional text publication without schema changes. The existing game account retains SELECT-only access to packs/audit. A separately reviewed maintenance instance and separately provisioned least-privilege account are required for the opt-in publisher; only SELECT/INSERT on its two quiz-owned content tables are needed for that operation. `quiz.content-publication.enabled=true` does not authorize the caller or grant database privileges. See [the content permission and transaction contract](../docs/CONTENT-PUBLICATION.md). No grants were executed.

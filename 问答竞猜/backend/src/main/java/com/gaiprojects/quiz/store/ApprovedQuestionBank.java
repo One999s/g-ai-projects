@@ -131,6 +131,21 @@ public final class ApprovedQuestionBank {
           || !MessageDigest.isEqual(
               MessageDigest.getInstance("SHA-256").digest(bytes),
               HexFormat.of().parseHex(row.hash))) throw new IllegalArgumentException();
+      return new Loaded(row, validateDocument(row.raw, locale, row.approvedAt, now));
+    } catch (Exception invalid) {
+      throw new RuleException("QUESTION_BANK_INVALID", 503);
+    }
+  }
+
+  /** The same strict text/content gate used by publication and runtime selection. */
+  public PackDocument validateDocument(String raw, String locale, long approvedAt, long now) {
+    try {
+      if (raw == null || !Set.of("en", "zh-CN").contains(locale))
+        throw new IllegalArgumentException();
+      byte[] bytes = raw.getBytes(StandardCharsets.UTF_8);
+      if (bytes.length > MAX_PACK_BYTES || !StandardCharsets.UTF_8.newEncoder().canEncode(raw))
+        throw new IllegalArgumentException();
+      validUnicode(json.readTree(bytes));
       PackDocument pack = json.readValue(bytes, PackDocument.class);
       if (!Set.of(2, 3, 4).contains(pack.schemaVersion())
           || pack.questions() == null
@@ -147,7 +162,7 @@ public final class ApprovedQuestionBank {
             || blank(item.rightsNote(), 2000)
             || blank(item.reviewedBy(), 128)
             || item.reviewedAtMillis() <= 0
-            || item.reviewedAtMillis() > row.approvedAt
+            || item.reviewedAtMillis() > approvedAt
             || item.reviewedAtMillis() > now) throw new IllegalArgumentException();
         Question q = item.question();
         if (!ids.add(q.id())
@@ -188,10 +203,17 @@ public final class ApprovedQuestionBank {
         if (pack.campaign() == null) throw new IllegalArgumentException();
         definitionHash(pack);
       } else if (pack.campaign() != null) throw new IllegalArgumentException();
-      return new Loaded(row, pack);
+      return pack;
     } catch (Exception invalid) {
-      throw new RuleException("QUESTION_BANK_INVALID", 503);
+      throw new RuleException("QUESTION_PACK_INVALID", 400);
     }
+  }
+
+  private static void validUnicode(JsonNode node) {
+    if (node.isTextual() && !StandardCharsets.UTF_8.newEncoder().canEncode(node.textValue()))
+      throw new IllegalArgumentException();
+    if (node.isContainerNode())
+      node.elements().forEachRemaining(ApprovedQuestionBank::validUnicode);
   }
 
   public Catalog catalog(String locale, long now) {

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.*;
 import com.gaiprojects.quiz.QuizApplication;
+import com.gaiprojects.quiz.content.*;
 import com.gaiprojects.quiz.core.*;
 import com.gaiprojects.quiz.identity.ExistingIdentityAdapter;
 import com.gaiprojects.quiz.narration.NarrationBank;
@@ -272,6 +273,22 @@ class GameHttpFlowTest {
     }
 
     @Bean
+    ContentMaintenanceAdapter fixtureContentPermission() {
+      return (req, player) ->
+          "content-reviewer".equals(req.getHeader("X-Test-Actor")) ? "TEST_GLOBAL_REVIEWER" : null;
+    }
+
+    @Bean
+    QuestionPackPublisher fixturePublisher(
+        DataSource ds, ApprovedQuestionBank bank, TestClock clock) {
+      return new QuestionPackPublisher(
+          new JdbcTemplate(ds),
+          new TransactionTemplate(new DataSourceTransactionManager(ds)),
+          bank,
+          clock);
+    }
+
+    @Bean
     ExistingIdentityAdapter fixtureIdentity(AuthState a, TestClock c) {
       return req -> {
         if (c.millis() >= a.until.get()) return null;
@@ -318,6 +335,8 @@ class GameHttpFlowTest {
             "quiz_scores",
             "quiz_progress",
             "quiz_sessions")) db.execute("DELETE FROM " + t);
+    db.update("DELETE FROM quiz_question_audit WHERE pack_version <> 'HTTP_TEST_ONLY'");
+    db.update("DELETE FROM quiz_question_packs WHERE pack_version <> 'HTTP_TEST_ONLY'");
     db.update("UPDATE quiz_question_packs SET status='approved'");
   }
 
@@ -348,6 +367,110 @@ class GameHttpFlowTest {
         + s.get("sessionId").asText()
         + "/rounds/"
         + s.get("roundId").asText();
+  }
+
+  @Test
+  void textPublicationPreviewToChapterStartIsAnActualHttpFlow() throws Exception {
+    var db = new JdbcTemplate(ds);
+    String raw =
+        db.queryForObject(
+            "SELECT questions_json FROM quiz_question_packs WHERE pack_version='HTTP_TEST_ONLY'",
+            String.class);
+    var body =
+        new QuestionPackPublisher.Input(
+            "HTTP_IMPORTED_V1",
+            "en",
+            raw,
+            null,
+            "Assistant synthetic review; not human or audio approval");
+    var preview =
+        data(
+            request(
+                "/api/quiz/content/packs/preview",
+                HttpMethod.POST,
+                json.writeValueAsString(body),
+                "content-reviewer"));
+    assertEquals(3, preview.get("chapterCount").asInt());
+    assertEquals(1, db.queryForObject("SELECT COUNT(*) FROM quiz_question_packs", Integer.class));
+    body =
+        new QuestionPackPublisher.Input(
+            body.version(), body.locale(), raw, preview.get("previewHash").asText(), body.reason());
+    String encoded = json.writeValueAsString(body);
+    assertTrue(
+        data(request(
+                "/api/quiz/content/packs/publish", HttpMethod.POST, encoded, "content-reviewer"))
+            .get("created")
+            .asBoolean());
+    assertFalse(
+        data(request(
+                "/api/quiz/content/packs/publish", HttpMethod.POST, encoded, "content-reviewer"))
+            .get("created")
+            .asBoolean());
+    assertEquals(
+        "HTTP_IMPORTED_V1",
+        data(request("/api/quiz/journey?locale=en", HttpMethod.GET, null, "owner"))
+            .get("version")
+            .asText());
+    var session =
+        data(
+            request(
+                "/api/quiz/sessions",
+                HttpMethod.POST,
+                json.writeValueAsString(
+                    Map.of(
+                        "locale",
+                        "en",
+                        "idempotencyKey",
+                        "imported-chapter",
+                        "chapterId",
+                        "chapter-1",
+                        "challengeVersion",
+                        "HTTP_IMPORTED_V1")),
+                "owner"));
+    assertEquals("chapter-1", session.get("chapter").get("levelId").asText());
+    assertTrue(session.get("question").isNull());
+    assertEquals(
+        1,
+        db.queryForObject(
+            "SELECT COUNT(*) FROM quiz_question_audit WHERE pack_version='HTTP_IMPORTED_V1'",
+            Integer.class));
+  }
+
+  @Test
+  void productionJavaScriptTransportImportsThenStartsChapterOverHttp() throws Exception {
+    String raw =
+        new JdbcTemplate(ds)
+            .queryForObject(
+                "SELECT questions_json FROM quiz_question_packs WHERE"
+                    + " pack_version='HTTP_TEST_ONLY'",
+                String.class);
+    var script = Path.of("../frontend/tests/content-http-smoke.mjs").toAbsolutePath().normalize();
+    var process =
+        new ProcessBuilder("node", script.toString(), "http://127.0.0.1:" + port)
+            .redirectErrorStream(true)
+            .start();
+    try {
+      try (var out = process.getOutputStream()) {
+        out.write(raw.getBytes(StandardCharsets.UTF_8));
+      }
+      assertTrue(process.waitFor(15, TimeUnit.SECONDS));
+      String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+      assertEquals(0, process.exitValue(), output);
+      assertTrue(output.contains("CONTENT_HTTP_IMPORT_CHAPTER_OK"), output);
+    } finally {
+      process.destroyForcibly();
+    }
+  }
+
+  @Test
+  void ordinaryPlayerCannotPreviewOrPublishEvenMalformedBodies() {
+    for (String actor : List.of("owner", "other-site", "other-user"))
+      for (String operation : List.of("preview", "publish")) {
+        var denied =
+            request("/api/quiz/content/packs/" + operation, HttpMethod.POST, "{malformed", actor);
+        assertEquals(403, denied.getStatusCode().value());
+        assertTrue(denied.getBody().contains("CONTENT_PUBLICATION_FORBIDDEN"));
+      }
   }
 
   @Test

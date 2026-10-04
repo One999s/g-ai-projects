@@ -1,0 +1,30 @@
+# B25: text question-pack preview and publication
+
+The bounded maintenance page is `frontend/content.html` (built as `dist/content.html`). Select an exported server JSON pack, enter its immutable version and locale, explain the review basis, request a server preview, then explicitly confirm publication. Selecting a local file alone sends nothing. The page uses the existing same-origin identity transport; it does not collect credentials or simulate an administrator.
+
+## Permission boundary
+
+The original identity integration is still missing. Both routes first require `ExistingIdentityAdapter`, then a separate `ContentMaintenanceAdapter.authorizeGlobalTextPublication(request, player)`. This adapter must verify a current **global quiz text publication** permission and return a stable, server-trusted audit actor reference. Ordinary player access, a site membership, a client header or a claimed administrator field cannot grant this capability. There is no production implementation or guessed role mapping. Permission and actor identity are rechecked after body admission and inside the transaction, including immediately before commit.
+
+The explicit application option `--quiz.content-publication.enabled=true` constructs the publisher in shared-db mode; it is absent by default. This flag does not create an identity adapter, a permission adapter, database credentials or grants. The normal game runtime grant template remains read-only for question packs and audit records. A separately reviewed maintenance application instance may use a separately provisioned account with SELECT and INSERT on those two quiz-owned tables, in the same selected logical database. It needs no UPDATE/DELETE/DDL, AI hub, original identity, team or wallet table access. Do not broaden the normal game account to make the maintenance page work. Integration and any account provisioning remain the deployment owner's separate work; no credentials or production settings were changed in this batch.
+
+## HTTP contract
+
+- POST `/api/quiz/content/packs/preview`
+- POST `/api/quiz/content/packs/publish`
+
+Both accept an application/json object with `version`, `locale`, `document` (the exact server-pack JSON as a string), `previewHash`, and `reason`. Versions use 1–80 ASCII letters, numbers, dot, underscore or hyphen, beginning with a letter or number. Locales are `en` and `zh-CN`. Document UTF-8 is at most 256 KiB. Request envelopes are bounded to 1.5 MiB, with ordinary origin, encoding, length and distributed admission checks. The preview can omit `previewHash` and `reason`; publication requires a nonblank review explanation of at most 1,000 characters and the preview digest. Unknown request fields are rejected by the application's strict JSON configuration.
+
+Preview returns version, locale, content SHA-256, preview digest, schema version, question/route/chapter counts and `AVAILABLE` or `IDENTICAL`. It does not return answers and writes nothing. The digest binds the version, locale and exact content hash. It is a stateless change-detection check, not a signed permission or evidence that a person reviewed the content. The server repeats full validation at publication. Changing the file, version, locale or review explanation clears the page's preview and confirmation.
+
+The shared validator accepts existing server schemas 2 (free challenge), 3 (versioned routes) and 4 (three chapters). It checks strict JSON, duplicate/unknown fields, valid Unicode, locale, question uniqueness and bounds, review timestamps, HTTPS source references, route coverage and increasing chapter difficulty. It never fetches source URLs. Structural validation does not establish factual truth, translation quality or usage rights; these remain the authorized publisher's explicit review responsibility. Assistant review should be named as such, never described as human approval.
+
+Publication immediately inserts the immutable approved text pack and its matching audit event in one bounded transaction. The actor and approval time come from the trusted server capability and clock. Repeating the same version/locale and exact bytes with an intact approval event returns `created=false`, including concurrent identical submissions. Changed bytes, retired/draft records or missing/mismatched audit records produce `PACK_VERSION_CONFLICT` (409); they are never overwritten or adopted. A changed preview digest produces `PACK_PREVIEW_CHANGED` (409). Audit-write failure or revoked permission rolls the entire transaction back. This operation does not approve narration or audio.
+
+New games use the latest currently effective approved pack under the existing runtime selection rules. Existing game sessions retain their stored questions and chapter definition. If several packs share an approval millisecond, the existing version ordering is the deterministic tie-breaker. Publishing a version does not rewrite any running session or previous chapter result.
+
+## Verification and remaining boundaries
+
+B25 tests cover no-write preview, exact-byte version conflicts, changed preview identity, invalid/unreviewed content, invalid Unicode, idempotency, simultaneous identical publication, atomic audit rollback, commit-time permission revocation and publication followed by a durable chapter start. The same store contract runs in the real-MySQL CI job. Actual HTTP tests include ordinary-player denial before malformed-body parsing, preview/confirm/retry, chapter opening, and the production JavaScript transport calling a test-profile server end to end.
+
+DOM tests cover explicit confirmation, field/file invalidation, no upload on file selection, size rejection, permission/conflict errors, abort/late-response handling, hidden-page cleanup and uncertain publication responses. These are automated checks, not real browser, original-account or device acceptance. No migration was added: V001/V002 bytes and the AI hub coexistence contract are unchanged. No model was run or changed; Chinese native voice remains 1/2 on the fixed sample pair.

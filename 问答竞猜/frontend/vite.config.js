@@ -1,4 +1,4 @@
 import {defineConfig} from 'vite'
 import vue from '@vitejs/plugin-vue'
 import {fileURLToPath} from 'node:url'
-export default defineConfig({base:'./',plugins:[vue()],build:{assetsInlineLimit:0,rollupOptions:{input:{demo:fileURLToPath(new URL('./index.html',import.meta.url)),server:fileURLToPath(new URL('./server.html',import.meta.url))}}},server:{host:'127.0.0.1',proxy:{'/api/quiz':{target:'http://127.0.0.1:8081',changeOrigin:false}}}})
+export default defineConfig({base:'./',plugins:[vue()],build:{assetsInlineLimit:0,rollupOptions:{input:{content:fileURLToPath(new URL('./content.html',import.meta.url)),demo:fileURLToPath(new URL('./index.html',import.meta.url)),server:fileURLToPath(new URL('./server.html',import.meta.url))}}},server:{host:'127.0.0.1',proxy:{'/api/quiz':{target:'http://127.0.0.1:8081',changeOrigin:false}}}})

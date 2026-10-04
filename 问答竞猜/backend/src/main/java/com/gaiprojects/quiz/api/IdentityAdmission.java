@@ -1,6 +1,7 @@
 package com.gaiprojects.quiz.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gaiprojects.quiz.content.*;
 import com.gaiprojects.quiz.core.*;
 import com.gaiprojects.quiz.identity.*;
 import com.gaiprojects.quiz.service.GameService;
@@ -29,13 +30,20 @@ public final class IdentityAdmission extends OncePerRequestFilter {
   private final ObjectProvider<GameService> services;
   private final ObjectMapper json;
   private final ObjectProvider<VoiceService> voices;
+  private final ObjectProvider<ContentMaintenanceAdapter> contentAdapters;
+  private final ObjectProvider<QuestionPackPublisher> publishers;
+  public static final String CONTENT_ACCESS = "quiz.contentAccess";
 
   public IdentityAdmission(
       ObjectProvider<ExistingIdentityAdapter> a,
       ObjectProvider<RequestQuota> q,
       ObjectProvider<GameService> s,
       ObjectProvider<VoiceService> v,
-      ObjectMapper json) {
+      ObjectMapper json,
+      ObjectProvider<ContentMaintenanceAdapter> contentAdapters,
+      ObjectProvider<QuestionPackPublisher> publishers) {
+    this.contentAdapters = contentAdapters;
+    this.publishers = publishers;
     adapters = a;
     quotas = q;
     services = s;
@@ -54,7 +62,8 @@ public final class IdentityAdmission extends OncePerRequestFilter {
           || path.matches("/api/quiz/sessions/" + ID + "/current")
           || path.matches("/api/quiz/sessions/" + ID + "/rounds/" + ID + "/narration(?:/audio)?");
     if (!method.equals("POST")) return false;
-    return path.equals("/api/quiz/sessions")
+    return contentPath(path)
+        || path.equals("/api/quiz/sessions")
         || path.matches("/api/quiz/sessions/" + ID + "/abandon")
         || path.matches(
             "/api/quiz/sessions/"
@@ -62,6 +71,22 @@ public final class IdentityAdmission extends OncePerRequestFilter {
                 + "/rounds/"
                 + ID
                 + "/(ready|answer|next|fifty-fifty|voice-candidate)");
+  }
+
+  private static boolean contentPath(String path) {
+    return path.equals("/api/quiz/content/packs/preview")
+        || path.equals("/api/quiz/content/packs/publish");
+  }
+
+  private static String operator(
+      ContentMaintenanceAdapter adapter, HttpServletRequest req, Player player) {
+    try {
+      String actor = adapter.authorizeGlobalTextPublication(req, player);
+      new ContentAccess(actor, () -> {});
+      return actor;
+    } catch (Exception denied) {
+      throw new RuleException("CONTENT_PUBLICATION_FORBIDDEN", 403);
+    }
   }
 
   @Override
@@ -98,6 +123,28 @@ public final class IdentityAdmission extends OncePerRequestFilter {
     } catch (RuleException unauthorized) {
       deny(req, res, 401, unauthorized.code);
       return;
+    }
+    ContentAccess contentAccess = null;
+    if (contentPath(path)) {
+      var contentAdapter = contentAdapters.getIfAvailable();
+      if (contentAdapter == null || publishers.getIfAvailable() == null) {
+        deny(req, res, 503, "CONTENT_PUBLICATION_NOT_CONFIGURED");
+        return;
+      }
+      try {
+        String actor = operator(contentAdapter, req, first);
+        contentAccess =
+            new ContentAccess(
+                actor,
+                () -> {
+                  if (!first.equals(resolve(adapter, req))
+                      || !actor.equals(operator(contentAdapter, req, first)))
+                    throw new RuleException("CONTENT_PUBLICATION_FORBIDDEN", 403);
+                });
+      } catch (RuleException denied) {
+        deny(req, res, denied.status, denied.code);
+        return;
+      }
     }
     var quota = quotas.getIfAvailable();
     if (quota == null) {
@@ -144,10 +191,11 @@ public final class IdentityAdmission extends OncePerRequestFilter {
       }
     }
     boolean hasJson =
-        method.equals("POST") && (path.equals("/api/quiz/sessions") || path.endsWith("/answer"));
+        method.equals("POST")
+            && (path.equals("/api/quiz/sessions") || path.endsWith("/answer") || contentPath(path));
     byte[] bytes;
     try {
-      bytes = read(req, hasJson, hasWave);
+      bytes = read(req, hasJson, hasWave, contentPath(path));
     } catch (RuleException invalid) {
       deny(req, res, invalid.status, invalid.code);
       return;
@@ -168,6 +216,15 @@ public final class IdentityAdmission extends OncePerRequestFilter {
     } catch (RuleException expired) {
       deny(req, res, 401, "AUTHENTICATION_REQUIRED");
       return;
+    }
+    if (contentAccess != null) {
+      try {
+        contentAccess.assertCurrent();
+      } catch (RuleException denied) {
+        deny(req, res, denied.status, denied.code);
+        return;
+      }
+      buffered.setAttribute(CONTENT_ACCESS, contentAccess);
     }
     buffered.setAttribute(ACCESS, access);
     chain.doFilter(buffered, res);
@@ -202,7 +259,7 @@ public final class IdentityAdmission extends OncePerRequestFilter {
     }
   }
 
-  private static byte[] read(HttpServletRequest req, boolean json, boolean wave)
+  private static byte[] read(HttpServletRequest req, boolean json, boolean wave, boolean content)
       throws IOException {
     long n = req.getContentLengthLong();
     if (req.getHeader("Transfer-Encoding") != null)
@@ -222,7 +279,7 @@ public final class IdentityAdmission extends OncePerRequestFilter {
                 .matches("application/json(\\s*;\\s*charset=utf-8)?")))
       throw new RuleException("JSON_REQUIRED", 415);
     if (n < 0) throw new RuleException("CONTENT_LENGTH_REQUIRED", 411);
-    int max = wave ? CanonicalWave.MAX_BYTES : 16384;
+    int max = wave ? CanonicalWave.MAX_BYTES : content ? 1572864 : 16384;
     if (n > max) throw new RuleException("REQUEST_TOO_LARGE", 413);
     if (wave && n < 3244) throw new RuleException("CANONICAL_WAV_REQUIRED", 415);
     if (n < 2) throw new RuleException("INVALID_JSON", 400);
