@@ -1,0 +1,18 @@
+{
+  "locale" : "zh-CN",
+  "modelProfile" : "tiny",
+  "recognitionHttpMillis" : 347,
+  "testClock" : true,
+  "fixtureId" : "third-option",
+  "automaticCandidateRecognized" : false,
+  "accurateCandidateExpected" : false,
+  "manualChoiceRequired" : true,
+  "transcript" : "無選擇第三項",
+  "candidateChoice" : null,
+  "requiresConfirmation" : true,
+  "beforeExplicitConfirmationScore" : 0,
+  "afterExplicitConfirmationScore" : 100,
+  "candidateChangedRevision" : false,
+  "testOnlyIdentityAndQuestionBank" : true,
+  "realUserAudio" : false
+}

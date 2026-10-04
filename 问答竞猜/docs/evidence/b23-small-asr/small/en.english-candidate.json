@@ -1,0 +1,18 @@
+{
+  "locale" : "en",
+  "modelProfile" : "small-2ec96c54",
+  "recognitionHttpMillis" : 1594,
+  "testClock" : true,
+  "fixtureId" : "english-candidate",
+  "automaticCandidateRecognized" : true,
+  "accurateCandidateExpected" : true,
+  "manualChoiceRequired" : false,
+  "transcript" : "My answer is option C.",
+  "candidateChoice" : 2,
+  "requiresConfirmation" : true,
+  "beforeExplicitConfirmationScore" : 0,
+  "afterExplicitConfirmationScore" : 100,
+  "candidateChangedRevision" : false,
+  "testOnlyIdentityAndQuestionBank" : true,
+  "realUserAudio" : false
+}

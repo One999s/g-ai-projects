@@ -57,4 +57,53 @@ class WorkerContract(unittest.TestCase):
                     worker.LocalWhisper('/synthetic/model')
 
 
+class ModelProfileContract(unittest.TestCase):
+    def test_profile_selection_is_closed_and_default_remains_tiny(self):
+        self.assertEqual('Systran/faster-whisper-tiny', worker.source_manifest()['repository'])
+        for name in ['', 'small', '../small', 'https://example.invalid/model']:
+            with self.assertRaises(ValueError): worker.source_manifest(name)
+        self.assertEqual(100*1024*1024, worker.DEFAULT_MODEL_FILE_LIMIT)
+
+    def fixture(self, root, profile):
+        manifest=worker.source_manifest(profile)
+        (root/'model-manifest.json').write_text(json.dumps(manifest))
+        for name in manifest['files']:
+            with (root/name).open('wb') as target: target.truncate(manifest.get('sizes',{}).get(name,1))
+        return manifest
+
+    def test_exact_small_sizes_and_hashes_allow_only_selected_profile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);manifest=self.fixture(root,'small-2ec96c54')
+            with patch.object(worker,'file_hash',side_effect=lambda p:manifest['files'][p.name]):
+                self.assertEqual(root.resolve(),worker.verified_model(root,'small-2ec96c54'))
+                with self.assertRaises(ValueError):worker.verified_model(root)
+                with (root/'model.bin').open('wb') as target:target.truncate(worker.SMALL_MODEL_BYTES-1)
+                with self.assertRaisesRegex(ValueError,'size'):worker.verified_model(root,'small-2ec96c54')
+
+    def test_large_exception_does_not_apply_to_tiny_or_tokenizer(self):
+        for profile,name in [('tiny','model.bin'),('small-2ec96c54','tokenizer.json')]:
+            with tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);manifest=self.fixture(root,profile)
+                with (root/name).open('wb') as target:target.truncate(worker.DEFAULT_MODEL_FILE_LIMIT+1)
+                with patch.object(worker,'file_hash',side_effect=lambda p:manifest['files'][p.name]):
+                    with self.assertRaisesRegex(ValueError,'size'):worker.verified_model(root,profile)
+
+    def test_small_tampering_and_manifest_edit_cannot_expand_allowance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);manifest=self.fixture(root,'small-2ec96c54')
+            with patch.object(worker,'file_hash',return_value='0'*64):
+                with self.assertRaisesRegex(ValueError,'hash'):worker.verified_model(root,'small-2ec96c54')
+            manifest['sizes']['model.bin']+=1
+            (root/'model-manifest.json').write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError,'Unreviewed'):worker.verified_model(root,'small-2ec96c54')
+
+    def test_small_missing_or_symlink_file_fails_before_import(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);manifest=self.fixture(root,'small-2ec96c54')
+            (root/'model.bin').unlink()
+            with patch.object(worker,'file_hash',side_effect=lambda p:manifest['files'][p.name]):
+                with self.assertRaises(ValueError):worker.verified_model(root,'small-2ec96c54')
+                (root/'model.bin').symlink_to(root/'tokenizer.json')
+                with self.assertRaises(ValueError):worker.verified_model(root,'small-2ec96c54')
+
 if __name__=='__main__':unittest.main()

@@ -1,0 +1,14 @@
+{
+  "chinese-http": [
+    "[ERROR] Tests run: 2, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 16.83 s <<< FAILURE! -- in com.gaiprojects.quiz.api.RealSpeechHttpIntegrationTest",
+    "[INFO] BUILD FAILURE"
+  ],
+  "english-http": [
+    "[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.79 s -- in com.gaiprojects.quiz.api.RealSpeechHttpIntegrationTest",
+    "[INFO] BUILD SUCCESS"
+  ],
+  "queue": [
+    "[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 13.68 s -- in com.gaiprojects.quiz.speech.RealSpeechQueueIntegrationTest",
+    "[INFO] BUILD SUCCESS"
+  ]
+}

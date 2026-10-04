@@ -1,0 +1,87 @@
+{
+  "modelProfile" : "small-2ec96c54",
+  "transportDeadlineMillis" : 4000,
+  "singleAsrProcess" : true,
+  "javaCapacityPerClient" : 2,
+  "workerListenBacklog" : 4,
+  "queueDelayIncludedInElapsed" : true,
+  "commercialConcurrencyAcceptance" : false,
+  "results" : {
+    "serial-two" : [ {
+      "fixture" : "third-option",
+      "status" : "OK",
+      "transcript" : "我選擇第三項",
+      "choice" : null,
+      "elapsedMillis" : 1727
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "答案13",
+      "choice" : null,
+      "elapsedMillis" : 1504
+    } ],
+    "simultaneous-two-one-java-client" : [ {
+      "fixture" : "third-option",
+      "status" : "OK",
+      "transcript" : "我選擇第三項",
+      "choice" : null,
+      "elapsedMillis" : 1549
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "答案13",
+      "choice" : null,
+      "elapsedMillis" : 3106
+    } ],
+    "simultaneous-four-one-java-client" : [ {
+      "fixture" : "third-option",
+      "status" : "OK",
+      "transcript" : "我選擇第三項",
+      "choice" : null,
+      "elapsedMillis" : 3084
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "答案13",
+      "choice" : null,
+      "elapsedMillis" : 1493
+    }, {
+      "fixture" : "third-option",
+      "status" : "ASR_BUSY",
+      "transcript" : null,
+      "choice" : null,
+      "elapsedMillis" : 0
+    }, {
+      "fixture" : "answer-three",
+      "status" : "ASR_BUSY",
+      "transcript" : null,
+      "choice" : null,
+      "elapsedMillis" : 0
+    } ],
+    "simultaneous-four-two-java-clients" : [ {
+      "fixture" : "third-option",
+      "status" : "OK",
+      "transcript" : "我選擇第三項",
+      "choice" : null,
+      "elapsedMillis" : 1535
+    }, {
+      "fixture" : "answer-three",
+      "status" : "ASR_UNAVAILABLE",
+      "transcript" : null,
+      "choice" : null,
+      "elapsedMillis" : 4003
+    }, {
+      "fixture" : "third-option",
+      "status" : "ASR_UNAVAILABLE",
+      "transcript" : null,
+      "choice" : null,
+      "elapsedMillis" : 4003
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "答案13",
+      "choice" : null,
+      "elapsedMillis" : 2977
+    } ]
+  }
+}

@@ -112,6 +112,9 @@ class RealSpeechHttpIntegrationTest {
           Arguments.of("en", "english-candidate", Path.of(System.getenv("QUIZ_REAL_ASR_WAV")), 2));
     if (!locale.equals("zh-CN"))
       throw new IllegalArgumentException("Explicit supported fixture locale required");
+    String profile = System.getenv().getOrDefault("QUIZ_REAL_ASR_MODEL_PROFILE", "tiny");
+    assertTrue(Set.of("tiny", "small-2ec96c54").contains(profile));
+    // The tiny outputs were inaccurate; small must independently produce an actual candidate.
     // These two actual model outputs were inaccurate. Keep them as safety regressions,
     // never reinterpret their failed recognition as a successful Chinese candidate.
     return Stream.of("third-option", "answer-three")
@@ -121,7 +124,7 @@ class RealSpeechHttpIntegrationTest {
                     "zh-CN",
                     id,
                     Path.of("../speech-worker/fixtures/synthetic-zh-" + id + "-v1/candidate.wav"),
-                    null));
+                    profile.equals("tiny") ? null : 2));
   }
 
   @ParameterizedTest(name = "{1}: unchanged game until explicit confirmation")
@@ -143,12 +146,9 @@ class RealSpeechHttpIntegrationTest {
     byte[] audio = Files.readAllBytes(wave);
     CanonicalWave.verify(audio);
     var original = call("/api/quiz/sessions/" + id + "/current", HttpMethod.GET, null, null);
+    long recognitionStarted = System.nanoTime();
     var candidate = call(base + "/voice-candidate", HttpMethod.POST, audio, "audio/wav");
-    if (expectedCandidate == null)
-      assertTrue(candidate.get("choice").isNull(), candidate.toString());
-    else
-      assertEquals(
-          expectedCandidate.intValue(), candidate.get("choice").asInt(), candidate.toString());
+    long recognitionMillis = (System.nanoTime() - recognitionStarted) / 1_000_000;
     assertTrue(candidate.get("requiresConfirmation").asBoolean());
     assertFalse(candidate.get("transcript").asText().isBlank());
     var before = call("/api/quiz/sessions/" + id + "/current", HttpMethod.GET, null, null);
@@ -167,9 +167,16 @@ class RealSpeechHttpIntegrationTest {
     if (receipt != null) {
       var evidence = json.createObjectNode();
       evidence.put("locale", locale);
+      evidence.put(
+          "modelProfile", System.getenv().getOrDefault("QUIZ_REAL_ASR_MODEL_PROFILE", "tiny"));
+      evidence.put("recognitionHttpMillis", recognitionMillis);
+      evidence.put("testClock", true);
       evidence.put("fixtureId", fixtureId);
-      evidence.put("automaticCandidateRecognized", expectedCandidate != null);
-      evidence.put("manualChoiceRequired", expectedCandidate == null);
+      evidence.put(
+          "automaticCandidateRecognized",
+          candidate.get("choice").isInt() && candidate.get("choice").asInt() == 2);
+      evidence.put("accurateCandidateExpected", expectedCandidate != null);
+      evidence.put("manualChoiceRequired", candidate.get("choice").isNull());
       evidence.put("transcript", candidate.get("transcript").asText());
       evidence.set("candidateChoice", candidate.get("choice"));
       evidence.put("requiresConfirmation", true);
@@ -183,5 +190,11 @@ class RealSpeechHttpIntegrationTest {
           json.writerWithDefaultPrettyPrinter().writeValueAsString(evidence) + "\n",
           StandardOpenOption.CREATE_NEW);
     }
+    // Preserve the full safety evidence even when the independent accuracy expectation fails.
+    if (expectedCandidate == null)
+      assertTrue(candidate.get("choice").isNull(), candidate.toString());
+    else
+      assertEquals(
+          expectedCandidate.intValue(), candidate.get("choice").asInt(), candidate.toString());
   }
 }

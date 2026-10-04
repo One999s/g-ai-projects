@@ -1,0 +1,34 @@
+{
+  "repository": "Systran/faster-whisper-small",
+  "revision": "2ec96c5472da50d38d40c0cfe0602af2e94b4c8a",
+  "files": [
+    {
+      "rfilename": "config.json",
+      "size": 2370,
+      "blob_id": "e5047537059bd8f182d9ca64c470201585015187",
+      "lfs": null
+    },
+    {
+      "rfilename": "model.bin",
+      "size": 483546902,
+      "blob_id": "504a7fe023f19460564a623887a9f77ea53ac708",
+      "lfs": {
+        "size": 483546902,
+        "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+        "pointer_size": 134
+      }
+    },
+    {
+      "rfilename": "tokenizer.json",
+      "size": 2203239,
+      "blob_id": "7818adb6de9fa3064d3ff81226fdd675be1f6344",
+      "lfs": null
+    },
+    {
+      "rfilename": "vocabulary.txt",
+      "size": 459861,
+      "blob_id": "c9074644d9d1205686f16d411564729461324b75",
+      "lfs": null
+    }
+  ]
+}

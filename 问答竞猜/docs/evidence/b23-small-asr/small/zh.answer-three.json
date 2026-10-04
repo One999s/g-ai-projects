@@ -1,0 +1,18 @@
+{
+  "locale" : "zh-CN",
+  "modelProfile" : "small-2ec96c54",
+  "recognitionHttpMillis" : 1653,
+  "testClock" : true,
+  "fixtureId" : "answer-three",
+  "automaticCandidateRecognized" : false,
+  "accurateCandidateExpected" : true,
+  "manualChoiceRequired" : true,
+  "transcript" : "答案13",
+  "candidateChoice" : null,
+  "requiresConfirmation" : true,
+  "beforeExplicitConfirmationScore" : 0,
+  "afterExplicitConfirmationScore" : 100,
+  "candidateChangedRevision" : false,
+  "testOnlyIdentityAndQuestionBank" : true,
+  "realUserAudio" : false
+}

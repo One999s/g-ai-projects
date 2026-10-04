@@ -13,6 +13,9 @@ import struct
 import time
 
 MAX_BYTES = 192044
+MODEL_PROFILES = {'tiny': 'model-source.json', 'small-2ec96c54': 'model-source-small.json'}
+DEFAULT_MODEL_FILE_LIMIT = 100 * 1024 * 1024
+SMALL_MODEL_BYTES = 483546902
 
 
 def pcm_bytes(data):
@@ -32,27 +35,38 @@ def file_hash(path):
     return value.hexdigest()
 
 
-def verified_model(directory):
+def source_manifest(profile='tiny'):
+    if profile not in MODEL_PROFILES: raise ValueError('Explicit approved model profile required')
+    return json.loads(Path(__file__).with_name(MODEL_PROFILES[profile]).read_text())
+
+
+def verified_model(directory, profile='tiny'):
     root = Path(directory).resolve()
     manifest_path = root / 'model-manifest.json'
     if manifest_path.is_symlink() or not manifest_path.is_file() or manifest_path.stat().st_size > 16384:
         raise ValueError('Explicit local model manifest required')
     manifest = json.loads(manifest_path.read_text())
-    expected = json.loads(Path(__file__).with_name('model-source.json').read_text())
+    expected = source_manifest(profile)
     if manifest != expected: raise ValueError('Unreviewed model revision or manifest')
     files = manifest.get('files', {})
     if not {'model.bin','config.json','tokenizer.json'} <= set(files) or not set(files) <= {'model.bin','config.json','tokenizer.json','vocabulary.json','vocabulary.txt','preprocessor_config.json'}:
         raise ValueError('Incomplete local model')
     for name, expected in files.items():
         path = root / name
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > 100 * 1024 * 1024 or file_hash(path) != expected:
+        limit = DEFAULT_MODEL_FILE_LIMIT
+        if profile == 'small-2ec96c54' and name == 'model.bin':
+            limit = SMALL_MODEL_BYTES  # Exact reviewed artifact; never a generic larger-model allowance.
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > limit:
             raise ValueError('Local model hash or size mismatch')
+        if profile == 'small-2ec96c54' and path.stat().st_size != manifest['sizes'][name]:
+            raise ValueError('Pinned small model size mismatch')
+        if file_hash(path) != expected: raise ValueError('Local model hash or size mismatch')
     return root
 
 
 class LocalWhisper:
-    def __init__(self, directory):
-        root = verified_model(directory)
+    def __init__(self, directory, profile='tiny'):
+        root = verified_model(directory, profile)
         # Refuse the telemetry-capable dependency before any model/runtime import.
         # The pinned non-batched path has vad_filter=False and does not require ONNX VAD.
         if importlib.util.find_spec('onnxruntime') is not None:
@@ -142,10 +156,11 @@ def make_server(transcribe, port=9609):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model-dir', type=Path, required=True)
+    parser.add_argument('--model-profile', choices=tuple(MODEL_PROFILES), default='tiny')
     parser.add_argument('--port', type=int, default=9609)
     args = parser.parse_args()
     if not 1 <= args.port <= 65535: parser.error('Invalid port')
-    processor = LocalWhisper(args.model_dir)
+    processor = LocalWhisper(args.model_dir, args.model_profile)
     with make_server(processor, args.port) as server:
         print('Quiz private ASR ready on literal loopback', flush=True)
         server.serve_forever()

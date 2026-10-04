@@ -1,0 +1,87 @@
+{
+  "modelProfile" : "tiny",
+  "transportDeadlineMillis" : 4000,
+  "singleAsrProcess" : true,
+  "javaCapacityPerClient" : 2,
+  "workerListenBacklog" : 4,
+  "queueDelayIncludedInElapsed" : true,
+  "commercialConcurrencyAcceptance" : false,
+  "results" : {
+    "serial-two" : [ {
+      "fixture" : "third-option",
+      "status" : "OK",
+      "transcript" : "無選擇第三項",
+      "choice" : null,
+      "elapsedMillis" : 371
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "大十三",
+      "choice" : null,
+      "elapsedMillis" : 273
+    } ],
+    "simultaneous-two-one-java-client" : [ {
+      "fixture" : "third-option",
+      "status" : "OK",
+      "transcript" : "無選擇第三項",
+      "choice" : null,
+      "elapsedMillis" : 555
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "大十三",
+      "choice" : null,
+      "elapsedMillis" : 278
+    } ],
+    "simultaneous-four-one-java-client" : [ {
+      "fixture" : "third-option",
+      "status" : "ASR_BUSY",
+      "transcript" : null,
+      "choice" : null,
+      "elapsedMillis" : 0
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "大十三",
+      "choice" : null,
+      "elapsedMillis" : 549
+    }, {
+      "fixture" : "third-option",
+      "status" : "ASR_BUSY",
+      "transcript" : null,
+      "choice" : null,
+      "elapsedMillis" : 0
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "大十三",
+      "choice" : null,
+      "elapsedMillis" : 279
+    } ],
+    "simultaneous-four-two-java-clients" : [ {
+      "fixture" : "third-option",
+      "status" : "OK",
+      "transcript" : "無選擇第三項",
+      "choice" : null,
+      "elapsedMillis" : 289
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "大十三",
+      "choice" : null,
+      "elapsedMillis" : 1113
+    }, {
+      "fixture" : "third-option",
+      "status" : "OK",
+      "transcript" : "無選擇第三項",
+      "choice" : null,
+      "elapsedMillis" : 849
+    }, {
+      "fixture" : "answer-three",
+      "status" : "OK",
+      "transcript" : "大十三",
+      "choice" : null,
+      "elapsedMillis" : 578
+    } ]
+  }
+}

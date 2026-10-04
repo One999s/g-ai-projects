@@ -1,0 +1,27 @@
+{
+  "modelProfile": "tiny",
+  "workerPeakRssBytesSampled": 239214592,
+  "rssSampleMillis": 40,
+  "rssLimitBytes": 3221225472,
+  "stopReason": null,
+  "workerExited": true,
+  "elapsedSeconds": 37.995,
+  "results": [
+    {
+      "case": "chinese-http",
+      "exitCode": 0
+    },
+    {
+      "case": "english-http",
+      "exitCode": 0
+    },
+    {
+      "case": "queue",
+      "exitCode": 0
+    }
+  ],
+  "nativeNetworkObservationComplete": false,
+  "commercialConcurrencyAcceptance": false,
+  "testOnlyIdentityQuestionBankQuotaAndClock": true,
+  "workerSha256": "0bb714c936b905af30af07a0e8e22100082663499778adcfdd3f965562b4683c"
+}

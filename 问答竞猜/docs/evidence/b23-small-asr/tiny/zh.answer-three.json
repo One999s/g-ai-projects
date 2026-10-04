@@ -1,0 +1,18 @@
+{
+  "locale" : "zh-CN",
+  "modelProfile" : "tiny",
+  "recognitionHttpMillis" : 309,
+  "testClock" : true,
+  "fixtureId" : "answer-three",
+  "automaticCandidateRecognized" : false,
+  "accurateCandidateExpected" : false,
+  "manualChoiceRequired" : true,
+  "transcript" : "大十三",
+  "candidateChoice" : null,
+  "requiresConfirmation" : true,
+  "beforeExplicitConfirmationScore" : 0,
+  "afterExplicitConfirmationScore" : 100,
+  "candidateChangedRevision" : false,
+  "testOnlyIdentityAndQuestionBank" : true,
+  "realUserAudio" : false
+}
