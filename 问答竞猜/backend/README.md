@@ -28,7 +28,7 @@ ApprovedQuestionBank joins eligibility and matching approval evidence in one SQL
 
 Session APIs, atomic start/replay, transaction authorization rechecks and the source JavaScript transport are implemented; see docs/API.md. Original identity and enabled distributed quota are mandatory; identity remains absent and Redis remains disabled by default, so production traffic remains fail-closed. Node20+ is additionally required by the actual source-client HTTP integration test; CI pins Node24.
 
-B20 writes state schemaVersion4 with optional reviewed challenge metadata and reads schemaVersion3 free sessions. Existing incompatible/experimental version2 bytes are preserved and rejected. There is no bulk conversion or DDL change. A normal state mutation writes version4; coordinate application rollout because B19 cannot read it. See docs/CHALLENGE-PLANS.md.
+B21 writes state schemaVersion5 with optional chapter contracts and reads schemaVersion3 free and schemaVersion4 free/route sessions. Existing incompatible/experimental version2 bytes are preserved and rejected. There is no bulk state conversion. B21 appends the owned chapter-progress table in V002; coordinate offline migration and minimal grants. A normal state mutation writes version5; coordinate application rollout because B20 cannot read it. See docs/CHAPTER-JOURNEY.md.
 
 ## B09 distributed Redis admission
 

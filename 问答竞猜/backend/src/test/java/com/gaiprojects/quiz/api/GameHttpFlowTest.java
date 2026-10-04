@@ -100,7 +100,7 @@ class GameHttpFlowTest {
       byte[] wave = b.array();
       String sha = NarrationBank.sha(wave);
       var entries = new ArrayList<NarrationBank.Entry>();
-      for (int i = 0; i < 5; i++)
+      for (int i = 0; i < 15; i++)
         entries.add(
             new NarrationBank.Entry(
                 "HTTP_TEST_ONLY",
@@ -169,12 +169,16 @@ class GameHttpFlowTest {
           getClass().getResourceAsStream("/db/migration/V001__quiz_business_tables.sql")) {
         ddl = new String(in.readAllBytes(), StandardCharsets.UTF_8);
       }
+      try (var in =
+          getClass().getResourceAsStream("/db/migration/V002__quiz_chapter_progress.sql")) {
+        ddl += "\n" + new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+      }
       for (String part :
           ddl.replaceAll("(?m)^--.*$", "")
               .replace("ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin", "")
               .split(";")) if (!part.isBlank()) db.execute(part);
       var list = new ArrayList<ApprovedQuestionBank.ReviewedQuestion>();
-      for (int i = 0; i < 5; i++)
+      for (int i = 0; i < 15; i++)
         list.add(
             new ApprovedQuestionBank.ReviewedQuestion(
                 new Question(
@@ -190,23 +194,33 @@ class GameHttpFlowTest {
                 "TEST_ONLY",
                 NOW - 3000,
                 "space",
-                1 + i / 2));
+                1 + i / 5));
+      var plans = new ArrayList<ChallengePlan>();
+      plans.add(
+          new ChallengePlan(
+              "rising",
+              "TEST ONLY ROUTE",
+              List.of(
+                  new ChallengePlan.Slot("space", 1),
+                  new ChallengePlan.Slot("space", 1),
+                  new ChallengePlan.Slot("space", 2),
+                  new ChallengePlan.Slot("space", 2),
+                  new ChallengePlan.Slot("space", 3))));
+      var levels = new ArrayList<Campaign.Level>();
+      for (int n = 1; n <= 3; n++) {
+        plans.add(
+            new ChallengePlan(
+                "plan-" + n,
+                "TEST PLAN " + n,
+                Collections.nCopies(5, new ChallengePlan.Slot("space", n))));
+        levels.add(
+            new Campaign.Level("chapter-" + n, "TEST CHAPTER " + n, "plan-" + n, n == 3 ? 4 : 3));
+      }
       String raw =
           new ObjectMapper()
               .writeValueAsString(
                   new ApprovedQuestionBank.PackDocument(
-                      3,
-                      list,
-                      List.of(
-                          new ChallengePlan(
-                              "rising",
-                              "TEST ONLY ROUTE",
-                              List.of(
-                                  new ChallengePlan.Slot("space", 1),
-                                  new ChallengePlan.Slot("space", 1),
-                                  new ChallengePlan.Slot("space", 2),
-                                  new ChallengePlan.Slot("space", 2),
-                                  new ChallengePlan.Slot("space", 3))))));
+                      4, list, plans, new Campaign("journey", "r1", "TEST JOURNEY", levels)));
       String hash =
           HexFormat.of()
               .formatHex(
@@ -297,8 +311,13 @@ class GameHttpFlowTest {
     auth.expireDuringQuota = false;
     auth.denyQuota = false;
     var db = new JdbcTemplate(ds);
-    for (String t : List.of("quiz_outbox", "quiz_scores", "quiz_progress", "quiz_sessions"))
-      db.execute("DELETE FROM " + t);
+    for (String t :
+        List.of(
+            "quiz_chapter_progress",
+            "quiz_outbox",
+            "quiz_scores",
+            "quiz_progress",
+            "quiz_sessions")) db.execute("DELETE FROM " + t);
     db.update("UPDATE quiz_question_packs SET status='approved'");
   }
 
@@ -746,7 +765,7 @@ class GameHttpFlowTest {
   @Test
   void challengeCatalogAndCreationBindVersionWithoutDisclosingQuestions() throws Exception {
     var catalog = data(request("/api/quiz/challenges?locale=en", HttpMethod.GET, null, "owner"));
-    assertEquals(1, catalog.get("plans").size());
+    assertEquals(4, catalog.get("plans").size());
     assertFalse(catalog.toString().contains("http-test-"));
     assertFalse(catalog.toString().contains("SYNTHETIC TEST QUESTION"));
     var body =
@@ -815,5 +834,73 @@ class GameHttpFlowTest {
         request("/api/quiz/challenges?locale=en", HttpMethod.GET, null, "owner")
             .getStatusCode()
             .value());
+  }
+
+  JsonNode playChapterHttp(String level, int correct, String key) throws Exception {
+    String body =
+        json.writeValueAsString(
+            Map.of(
+                "locale",
+                "en",
+                "idempotencyKey",
+                key,
+                "chapterId",
+                level,
+                "challengeVersion",
+                "HTTP_TEST_ONLY"));
+    var s = data(request("/api/quiz/sessions", HttpMethod.POST, body, "owner"));
+    assertEquals(level, s.get("chapter").get("levelId").asText());
+    assertTrue(s.get("question").isNull());
+    for (int i = 0; i < 5; i++) {
+      s = data(request(roundPath(s) + "/ready", HttpMethod.POST, null, "owner"));
+      clock.value.set(s.get("opensAt").asLong());
+      s =
+          data(request(
+                  roundPath(s) + "/answer",
+                  HttpMethod.POST,
+                  json.writeValueAsString(
+                      Map.of(
+                          "choice", i < correct ? 2 : 0, "idempotencyKey", key + "-answer-" + i)),
+                  "owner"))
+              .get("session");
+      s = data(request(roundPath(s) + "/next", HttpMethod.POST, null, "owner"));
+    }
+    return s;
+  }
+
+  @Test
+  void actualHttpJourneyFailsThenReplaysAndUnlocksThreePersistentChapters() throws Exception {
+    String path = "/api/quiz/journey?locale=en";
+    var j = data(request(path, HttpMethod.GET, null, "owner"));
+    assertTrue(j.get("levels").get(0).get("unlocked").asBoolean());
+    assertFalse(j.get("levels").get(1).get("unlocked").asBoolean());
+    String locked =
+        json.writeValueAsString(
+            Map.of(
+                "locale",
+                "en",
+                "idempotencyKey",
+                "skip-chapter",
+                "chapterId",
+                "chapter-2",
+                "challengeVersion",
+                "HTTP_TEST_ONLY"));
+    assertEquals(
+        409,
+        request("/api/quiz/sessions", HttpMethod.POST, locked, "owner").getStatusCode().value());
+    assertFalse(playChapterHttp("chapter-1", 2, "first-failure").get("chapterPassed").asBoolean());
+    j = data(request(path, HttpMethod.GET, null, "owner"));
+    assertFalse(j.get("levels").get(1).get("unlocked").asBoolean());
+    assertTrue(playChapterHttp("chapter-1", 3, "first-replay").get("chapterPassed").asBoolean());
+    j = data(request(path, HttpMethod.GET, null, "owner"));
+    assertEquals(2, j.get("levels").get(0).get("attempts").asInt());
+    assertTrue(j.get("levels").get(1).get("unlocked").asBoolean());
+    assertFalse(j.get("levels").get(2).get("unlocked").asBoolean());
+    assertTrue(playChapterHttp("chapter-2", 3, "second-clear").get("chapterPassed").asBoolean());
+    assertTrue(playChapterHttp("chapter-3", 4, "third-clear").get("chapterPassed").asBoolean());
+    j = data(request(path, HttpMethod.GET, null, "owner"));
+    for (var l : j.get("levels")) assertTrue(l.get("passed").asBoolean());
+    auth.expireDuringQuota = true;
+    assertEquals(401, request(path, HttpMethod.GET, null, "owner").getStatusCode().value());
   }
 }

@@ -38,6 +38,9 @@ class JdbcGameStoreTest {
         getClass().getResourceAsStream("/db/migration/V001__quiz_business_tables.sql")) {
       ddl = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
     }
+    try (var in = getClass().getResourceAsStream("/db/migration/V002__quiz_chapter_progress.sql")) {
+      ddl += "\n" + new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    }
     ddl = ddl.replaceAll("(?m)^--.*$", "");
     if (h2) ddl = ddl.replace("ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin", "");
     for (String part : ddl.split(";")) if (!part.isBlank()) db.execute(part);
@@ -576,5 +579,259 @@ class JdbcGameStoreTest {
         forged,
         db.queryForObject(
             "SELECT state_json FROM quiz_sessions WHERE session_id=?", String.class, s.id));
+  }
+
+  static final String JOURNEY_HASH = "a".repeat(64);
+
+  GameSession chapter(int index, String key, Player player, String hash) {
+    return store.createAtomic(
+        player,
+        "en",
+        key,
+        null,
+        "TEST_ONLY",
+        "chapter-" + index,
+        () -> {},
+        () -> {
+          var g = newSession(player);
+          g.challenge =
+              new ChallengePlan(
+                  "route",
+                  "Test route",
+                  Collections.nCopies(5, new ChallengePlan.Slot("space", index)));
+          g.chapter =
+              new CampaignChapter(
+                  "journey",
+                  "r1",
+                  hash,
+                  "Test journey",
+                  "chapter-" + index,
+                  "Chapter " + index,
+                  index,
+                  3,
+                  index == 3 ? 4 : 3,
+                  java.util.stream.IntStream.range(1, index)
+                      .mapToObj(i -> "chapter-" + i)
+                      .toList());
+          return g;
+        });
+  }
+
+  void finishCorrect(int correct) {
+    for (int i = 0; i < 5; i++) {
+      String r = round();
+      int choice = i < correct ? 2 : 0;
+      String key = "chapter-answer-" + i;
+      store.transact(
+          s.id,
+          owner,
+          g -> {
+            rules.ready(g, r, now);
+            rules.answer(g, r, choice, key, now + 1000);
+            if (g.index < 4) rules.next(g, r, now + 1001);
+            return null;
+          });
+      now += 10000;
+    }
+  }
+
+  @Test
+  void chaptersRequirePriorPassAndFailuresDoNotUnlock() {
+    assertEquals(
+        "CHAPTER_LOCKED",
+        assertThrows(RuleException.class, () -> chapter(2, "locked-create", owner, JOURNEY_HASH))
+            .code);
+    s = chapter(1, "chapter-one-fail", owner, JOURNEY_HASH);
+    finishCorrect(2);
+    var p = store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).getFirst();
+    assertFalse(p.passed());
+    assertEquals(1, p.attempts());
+    assertEquals(2, p.bestCorrect());
+    assertThrows(RuleException.class, () -> chapter(2, "still-locked", owner, JOURNEY_HASH));
+  }
+
+  @Test
+  void passReplayAndCompletionRetryPersistWithoutDoubleProgress() {
+    s = chapter(1, "chapter-one-pass", owner, JOURNEY_HASH);
+    finish();
+    String last = round();
+    store.transact(s.id, owner, g -> rules.answer(g, last, 2, "answer-key-4", now));
+    var p = store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).getFirst();
+    assertTrue(p.passed());
+    assertEquals(1, p.attempts());
+    assertEquals(750, p.bestScore());
+    assertEquals(2, chapter(2, "chapter-two-open", owner, JOURNEY_HASH).chapter.index());
+    s = chapter(1, "chapter-one-replay", owner, JOURNEY_HASH);
+    finishCorrect(0);
+    p = store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).getFirst();
+    assertTrue(p.passed());
+    assertEquals(2, p.attempts());
+    assertEquals(750, p.bestScore());
+    assertEquals(5, p.bestCorrect());
+  }
+
+  @Test
+  void chapterProgressIsIsolatedBySiteUserAndRulesHash() {
+    s = chapter(1, "scope-pass", owner, JOURNEY_HASH);
+    finish();
+    for (var other : List.of(new Player(8, 42), new Player(7, 43)))
+      assertThrows(RuleException.class, () -> chapter(2, "scope-locked", other, JOURNEY_HASH));
+    assertThrows(RuleException.class, () -> chapter(2, "version-locked", owner, "b".repeat(64)));
+    assertEquals(1, store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).size());
+  }
+
+  @Test
+  void abandonedAndFreeGamesCannotUnlockChapters() {
+    finish();
+    assertTrue(store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).isEmpty());
+    s = chapter(1, "abandoned-chapter", owner, JOURNEY_HASH);
+    store.transact(
+        s.id,
+        owner,
+        g -> {
+          rules.abandon(g, now);
+          return null;
+        });
+    assertTrue(store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).isEmpty());
+    assertThrows(RuleException.class, () -> chapter(2, "after-abandon", owner, JOURNEY_HASH));
+  }
+
+  @Test
+  void chapterIdentityIsPartOfCreationKeyAndLegacyStateFourStillReads() throws Exception {
+    s = chapter(1, "chapter-create-key", owner, JOURNEY_HASH);
+    assertEquals(s.id, chapter(1, "chapter-create-key", owner, JOURNEY_HASH).id);
+    assertEquals(
+        "IDEMPOTENCY_CONFLICT",
+        assertThrows(
+                RuleException.class, () -> chapter(2, "chapter-create-key", owner, JOURNEY_HASH))
+            .code);
+    assertThrows(
+        RuleException.class,
+        () ->
+            store.createAtomic(
+                owner,
+                "en",
+                "chapter-create-key",
+                "route",
+                "TEST_ONLY",
+                () -> {},
+                () -> newSession(owner)));
+    var free = store.create(newSession(owner), "old-four-free");
+    String raw =
+        db.queryForObject(
+            "SELECT state_json FROM quiz_sessions WHERE session_id=?", String.class, free.id);
+    raw = raw.replace("\"schemaVersion\":5", "\"schemaVersion\":4");
+    db.update("UPDATE quiz_sessions SET state_json=? WHERE session_id=?", raw, free.id);
+    assertEquals(free.id, store.transact(free.id, owner, g -> g.id));
+  }
+
+  @Test
+  void chapterSettlementRollsBackWhenLaterOutboxWriteFails() {
+    s = chapter(1, "atomic-chapter", owner, JOURNEY_HASH);
+    for (int i = 0; i < 4; i++) {
+      String r = round(), key = "atomic-round-" + i;
+      store.transact(
+          s.id,
+          owner,
+          g -> {
+            rules.ready(g, r, now);
+            rules.answer(g, r, 2, key, now + 1000);
+            rules.next(g, r, now + 1001);
+            return null;
+          });
+      now += 10000;
+    }
+    db.execute(
+        "ALTER TABLE quiz_outbox ADD CONSTRAINT fixture_outbox_failure CHECK(event_type <>"
+            + " 'game.completed')");
+    String r = round();
+    assertThrows(
+        org.springframework.dao.DataAccessException.class,
+        () ->
+            store.transact(
+                s.id,
+                owner,
+                g -> {
+                  rules.ready(g, r, now);
+                  rules.answer(g, r, 2, "atomic-final", now + 1000);
+                  return null;
+                }));
+    assertTrue(store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).isEmpty());
+    assertEquals(0, store.progress(owner).gamesPlayed());
+    assertEquals(0, db.queryForObject("SELECT COUNT(*) FROM quiz_scores", Integer.class));
+    assertEquals(4, store.<Integer>transact(s.id, owner, g -> g.results.size()));
+  }
+
+  void concurrentChapterGate(boolean rollback) throws Exception {
+    s = chapter(1, "concurrent-chapter", owner, JOURNEY_HASH);
+    for (int i = 0; i < 4; i++) {
+      String r = round(), key = "before-gate-" + i;
+      store.transact(
+          s.id,
+          owner,
+          g -> {
+            rules.ready(g, r, now);
+            rules.answer(g, r, 2, key, now + 1000);
+            rules.next(g, r, now + 1001);
+            return null;
+          });
+      now += 10000;
+    }
+    ready();
+    String last = round();
+    var staged = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    var pool = Executors.newFixedThreadPool(2);
+    var checks = new java.util.concurrent.atomic.AtomicInteger();
+    try {
+      var completion =
+          pool.submit(
+              () ->
+                  store.transactGuarded(
+                      s.id,
+                      owner,
+                      () -> {
+                        if (checks.incrementAndGet() == 2) {
+                          staged.countDown();
+                          try {
+                            if (!release.await(3, TimeUnit.SECONDS))
+                              throw new IllegalStateException("Fixture timeout");
+                          } catch (InterruptedException e) {
+                            throw new IllegalStateException(e);
+                          }
+                          if (rollback) throw new RuleException("AUTHENTICATION_REQUIRED", 401);
+                        }
+                      },
+                      g -> rules.answer(g, last, 2, "concurrent-final", now + 1000)));
+      assertTrue(staged.await(3, TimeUnit.SECONDS));
+      var opening = pool.submit(() -> chapter(2, "concurrent-next", owner, JOURNEY_HASH));
+      assertThrows(TimeoutException.class, () -> opening.get(150, TimeUnit.MILLISECONDS));
+      release.countDown();
+      if (rollback) {
+        assertThrows(ExecutionException.class, () -> completion.get(3, TimeUnit.SECONDS));
+        var error = assertThrows(ExecutionException.class, () -> opening.get(3, TimeUnit.SECONDS));
+        assertInstanceOf(RuleException.class, error.getCause());
+        assertEquals("CHAPTER_LOCKED", ((RuleException) error.getCause()).code);
+        assertTrue(store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).isEmpty());
+      } else {
+        completion.get(3, TimeUnit.SECONDS);
+        assertEquals(2, opening.get(3, TimeUnit.SECONDS).chapter.index());
+        assertEquals(
+            1, store.chapterProgress(owner, "journey", "r1", JOURNEY_HASH).getFirst().attempts());
+      }
+    } finally {
+      release.countDown();
+      pool.shutdownNow();
+    }
+  }
+
+  @Test
+  void nextChapterWaitsForCommittedCompletion() throws Exception {
+    concurrentChapterGate(false);
+  }
+
+  @Test
+  void rolledBackCompletionCannotUnlockConcurrentStart() throws Exception {
+    concurrentChapterGate(true);
   }
 }

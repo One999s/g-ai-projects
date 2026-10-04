@@ -10,3 +10,6 @@ GRANT INSERT ON `REVIEWED_SCHEMA`.`quiz_outbox` TO 'REVIEWED_QUIZ_USER'@'REVIEWE
 -- No identity/team/wallet/AI hub/history permissions. No DELETE, DDL or grant option.
 -- History validation is currently an offline migration-owner responsibility.
 -- Content approval/import and future outbox delivery require separate explicitly reviewed roles.
+
+-- V002 chapter progress: runtime may read/update only its owned business table.
+GRANT SELECT, INSERT, UPDATE ON `REVIEWED_SCHEMA`.`quiz_chapter_progress` TO 'REVIEWED_QUIZ_USER'@'REVIEWED_HOST';

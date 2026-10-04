@@ -53,7 +53,7 @@ java -Xmx256m -XX:ActiveProcessorCount=2 -jar quiz-challenge-<commit>.jar
 
 ## 数据版本、回退与运营
 
-B20新写state_json版本4，兼容版本3自由会话，正式文字包支持schema2自由挑战及schema3审核路线；不批量转换或删除旧状态。回退JAR前必须核对其读写版本兼容性，不能把替换二进制当数据回滚。先保留数据库备份与迁移清单，由schema owner决定恢复顺序。不要删除不兼容行来“恢复服务”。
+B21新写state_json版本5，兼容版本3自由/版本4自由与路线会话，正式文字包支持schema2自由、schema3路线及schema4章节；不批量转换或删除旧状态。回退JAR前必须核对其读写版本兼容性，不能把替换二进制当数据回滚。先保留数据库备份与迁移清单，由schema owner决定恢复顺序。不要删除不兼容行来“恢复服务”。
 
 公开status只表示进程存活且productionReady=false，不是完整就绪探针；部署系统需额外核验审核题包、真实身份链与依赖状态。错误用请求ID关联日志，日志不应记录Token、Cookie、语音字节、原始凭据或完整私有问题库。代理层设置连接/正文总时限、大小和速率上限；应用读后检查不能替代绝对慢请求截止。
 
@@ -79,3 +79,7 @@ QUIZ_NARRATION_ENABLED默认false；启用需明确QUIZ_NARRATION_DIRECTORY和QU
 
 ### B20状态与路线兼容
 部署B20前协调全部游戏实例停止旧版写入，再启动配套前后端。新state_json为schema4，兼容读取schema3自由会话；B19不能读schema4，不允许直接回滚旧JAR接管新会话。无DDL/history变化，无生产批量状态转换。schema2审核包仍支持自由挑战，schema3路线包必须独立版本与匹配审核/hash；导出工具只生成JSON，不自动上传/审批/迁移。详细步骤与边界见docs/CHALLENGE-PLANS.md。
+
+
+### B21增量章节表
+先由共享offline owner在共同锁下执行Quiz V002并核对2份迁移/7张自有表，授予运行账号quiz_chapter_progress的SELECT/INSERT/UPDATE；运行时DDL仍禁用。排空旧实例后部署配套前后端，B20不能读state5，不直接回滚旧JAR。V001原字节不变，AIhub/原实体/身份表不修改。跨应用双顺序/重复迁移保数需实际MySQL合同确认，参见docs/CHAPTER-JOURNEY.md。

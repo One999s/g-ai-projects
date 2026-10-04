@@ -30,6 +30,9 @@ class ApprovedQuestionBankTest {
     try (var in = getClass().getResourceAsStream("/db/migration/V001__quiz_business_tables.sql")) {
       ddl = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
     }
+    try (var in = getClass().getResourceAsStream("/db/migration/V002__quiz_chapter_progress.sql")) {
+      ddl += "\n" + new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    }
     ddl = ddl.replaceAll("(?m)^--.*$", "");
     if (h2) ddl = ddl.replace("ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin", "");
     for (String sql : ddl.split(";")) if (!sql.isBlank()) db.execute(sql);
@@ -346,7 +349,7 @@ class ApprovedQuestionBankTest {
         raw.replace(
             "\"category\":\"space\",\"difficulty\":3",
             "\"category\":\"ocean\",\"difficulty\":3"); // Replace question and slot together, then
-                                                        // require more hard questions than exist.
+    // require more hard questions than exist.
     var json = new ObjectMapper();
     var doc = json.readValue(raw, ApprovedQuestionBank.PackDocument.class);
     var slots = Collections.nCopies(5, new ChallengePlan.Slot("space", 3));
@@ -394,5 +397,99 @@ class ApprovedQuestionBankTest {
     assertThrows(RuleException.class, () -> bank.select("en", NOW, "rising", null));
     assertThrows(RuleException.class, () -> bank.select("en", NOW, null, "version"));
     assertThrows(RuleException.class, () -> bank.select("en", NOW, "free", "version"));
+  }
+
+  void journeyPack() throws Exception {
+    var json = new ObjectMapper();
+    var q = json.readValue(raw, ApprovedQuestionBank.PackDocument.class).questions().getFirst();
+    var questions = new ArrayList<ApprovedQuestionBank.ReviewedQuestion>();
+    for (int i = 0; i < 15; i++)
+      questions.add(
+          new ApprovedQuestionBank.ReviewedQuestion(
+              new Question(
+                  "journey-" + i,
+                  "en",
+                  q.question().text(),
+                  q.question().options(),
+                  2,
+                  q.question().explanation(),
+                  4000),
+              q.sources(),
+              q.rightsNote(),
+              q.reviewedBy(),
+              q.reviewedAtMillis(),
+              "space",
+              1 + i / 5));
+    var plans = new ArrayList<ChallengePlan>();
+    var levels = new ArrayList<Campaign.Level>();
+    for (int i = 1; i <= 3; i++) {
+      plans.add(
+          new ChallengePlan(
+              "plan-" + i,
+              "Test plan",
+              Collections.nCopies(5, new ChallengePlan.Slot("space", i))));
+      levels.add(new Campaign.Level("chapter-" + i, "Test chapter", "plan-" + i, i == 3 ? 4 : 3));
+    }
+    raw =
+        json.writeValueAsString(
+            new ApprovedQuestionBank.PackDocument(
+                4, questions, plans, new Campaign("journey", "r1", "Test journey", levels)));
+    hash = sha(raw);
+  }
+
+  @Test
+  void campaignSelectionPinsChapterContractAndPlan() throws Exception {
+    journeyPack();
+    seed(true);
+    var j = bank.journey("en", NOW);
+    assertEquals(3, j.campaign().levels().size());
+    var selected = bank.selectChapter("en", NOW, "chapter-2", "TEST_ONLY");
+    assertEquals(2, selected.chapter().index());
+    assertEquals(j.definitionHash(), selected.chapter().definitionHash());
+    assertEquals(List.of("chapter-1"), selected.chapter().priorLevelIds());
+    assertTrue(
+        selected.selection().questions().stream()
+            .allMatch(
+                q -> {
+                  int id = Integer.parseInt(q.id().substring(8));
+                  return id >= 5 && id < 10;
+                }));
+  }
+
+  @Test
+  void translatedTitlesDoNotResetProgressButRuleChangesDo() throws Exception {
+    journeyPack();
+    seed(true);
+    String original = bank.journey("en", NOW).definitionHash();
+    raw = raw.replace("Test journey", "另一种语言的旅程").replace("Test chapter", "章节标题");
+    hash = sha(raw);
+    db.update("UPDATE quiz_question_packs SET questions_json=?,content_sha256=?", raw, hash);
+    db.update("UPDATE quiz_question_audit SET content_sha256=?", hash);
+    assertEquals(original, bank.journey("en", NOW).definitionHash());
+    raw = raw.replace("\"requiredCorrect\":4", "\"requiredCorrect\":5");
+    hash = sha(raw);
+    db.update("UPDATE quiz_question_packs SET questions_json=?,content_sha256=?", raw, hash);
+    db.update("UPDATE quiz_question_audit SET content_sha256=?", hash);
+    assertNotEquals(original, bank.journey("en", NOW).definitionHash());
+  }
+
+  @Test
+  void campaignMustIncreaseDifficultyAndCannotReferenceMissingRoutes() throws Exception {
+    assertThrows(
+        IllegalArgumentException.class, () -> new Campaign.Level("free", "Reserved", "plan-1", 3));
+    journeyPack();
+    raw = raw.replace("\"planId\":\"plan-2\"", "\"planId\":\"plan-1\"");
+    hash = sha(raw);
+    seed(true);
+    assertThrows(RuleException.class, () -> bank.journey("en", NOW));
+  }
+
+  @Test
+  void oldRoutePacksOfferNoInventedCampaign() throws Exception {
+    planned();
+    seed(true);
+    assertNull(bank.journey("en", NOW).campaign());
+    assertThrows(
+        RuleException.class, () -> bank.selectChapter("en", NOW, "chapter-1", "TEST_ONLY"));
   }
 }

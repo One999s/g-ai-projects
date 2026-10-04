@@ -37,6 +37,7 @@ class MysqlJdbcGameStoreIntegrationTest extends JdbcGameStoreTest {
             {"SELECT,INSERT,UPDATE", "quiz_sessions"},
             {"SELECT,INSERT", "quiz_scores"},
             {"SELECT,INSERT,UPDATE", "quiz_progress"},
+            {"SELECT,INSERT,UPDATE", "quiz_chapter_progress"},
             {"INSERT", "quiz_outbox"}
           })
         admin.execute(

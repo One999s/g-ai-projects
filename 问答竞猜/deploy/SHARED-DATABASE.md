@@ -2,7 +2,7 @@
 
 AI中台与Quiz使用同一个明确选择的逻辑MySQL库，但不意味着已获准连接原生产实例。运行账号各自最小权限。默认profile不连接数据库；只有明确shared-db配置才连接，迁移文件从不自动执行。
 
-Quiz只拥有六张quiz_*表。V001是从AI中台远端fixture恢复的原始文件，SHA256 9129c52f44988c69bc3f7f3e7524b249c8cceeb912950160cd06b989491883e7。它不是原身份DDL，不创建/修改用户、sites、team或钱包表。
+B21后Quiz只拥有七张quiz_*表（V001六张、V002一张）。V001是从AI中台远端fixture恢复的原始文件，SHA256 9129c52f44988c69bc3f7f3e7524b249c8cceeb912950160cd06b989491883e7。它不是原身份DDL，不创建/修改用户、sites、team或钱包表。
 
 部署迁移由独立owner串行执行，统一锁shared_apps_schema_migration，独立ai_hub_schema_history/quiz_schema_history。禁止运行时DDL、自动baseline/clean/repair。真实DDL未知前不添加身份FK。受控连接工厂、URL白名单与首连前保护已在重建版本及真实MySQL合同中验证，详见下文。
 
@@ -14,6 +14,8 @@ shared-db显式连接由受控懒加载Hikari工厂提供，只消费SHARED_DATA
 
 独立迁移owner先核对真实DDL、现有history和表ownership，在同一个连接持有shared_apps_schema_migration锁，分别操作ai_hub_schema_history/quiz_schema_history，禁止混扫两套V001。只有目标应用命名空间确实为空、用户授权目标明确时才能在离线审核流程初始化；现有历史/旧表不自动收编。MySQL DDL非事务回滚，失败后先审阅，不自动drop或repair。运行账号不写history；当前history/checksum验证仍属离线流程，并未实现生产迁移CLI。
 
-B20新写state_json为schemaVersion=4信封（含可空审核路线），兼容读取B07–B19版本3的自由会话；原有业务状态写入时保存版本4，不批量转换。B05实验版本2及旧无版本/不兼容会话一律503拒绝并保留原字节，不删除、不挪用旧成绩。V001物理schema未变；这不是对原生产数据兼容性的宣称。上线前应单独审计历史会话/题包版本及迁移策略。
+B21新写state_json为schemaVersion=5信封（含可空章节合同），兼容读取版本3自由及版本4自由/审核路线会话；原有业务状态写入时保存版本5，不批量转换。B05实验版本2及旧无版本/不兼容会话一律503拒绝并保留原字节，不删除、不挪用旧成绩。V001物理schema未变；这不是对原生产数据兼容性的宣称。上线前应单独审计历史会话/题包版本及迁移策略。
 
 数据库权限见quiz-runtime-grants.sql.template。运行账号只访问quiz业务表，不读原身份、AI中台、团队或钱包表。部署说明只是模板，未实际创建生产账户或执行GRANT。
+
+B21在独立Quiz history追加V002，仅增quiz_chapter_progress一表，现2迁移/7表；原V001不变。章节运行权限与升级顺序详见CHAPTER-JOURNEY.md及RUNBOOK.md。

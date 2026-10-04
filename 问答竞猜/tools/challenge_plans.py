@@ -15,8 +15,8 @@ def validate(candidate, review, classification):
     raw = Path(classification).read_bytes()
     if len(raw) > 262144: c.fail('Classification too large')
     v = json.loads(raw, object_pairs_hook=c.unique_object)
-    c.exact(v, 'schemaVersion candidateSha256 reviewSha256 reviewedBy difficultyBasis playerCalibrated questions plans')
-    if type(v['schemaVersion']) is not int or v['schemaVersion'] != 1: c.fail()
+    c.exact(v, 'schemaVersion candidateSha256 reviewSha256 reviewedBy difficultyBasis playerCalibrated questions plans' + (' campaign' if v.get('schemaVersion') == 2 else ''))
+    if type(v['schemaVersion']) is not int or v['schemaVersion'] not in (1, 2): c.fail()
     if v['candidateSha256'] != hashlib.sha256(Path(candidate).read_bytes()).hexdigest() or v['reviewSha256'] != hashlib.sha256(Path(review).read_bytes()).hexdigest(): c.fail('Stale classification')
     if v['reviewedBy'] != 'assistant:editorial-route-review' or v['playerCalibrated'] is not False or v['difficultyBasis'] != 'editorial-estimate-1-foundation-2-familiar-3-specialist': c.fail('Editorial scope required')
     if not isinstance(v['questions'], list) or len(v['questions']) != len(pack['questions']): c.fail()
@@ -39,6 +39,22 @@ def validate(candidate, review, classification):
             if not isinstance(slot['category'], str) or not re.fullmatch('[a-z][a-z0-9-]{0,31}', slot['category']) or type(slot['difficulty']) is not int or not previous <= slot['difficulty'] <= 3 or slot['difficulty'] < 1: c.fail()
             previous = slot['difficulty']; needed[(slot['category'], previous)] += 1
         if needed - available: c.fail('Insufficient distinct questions for plan')
+    if v['schemaVersion'] == 2:
+        campaign=v['campaign']; c.exact(campaign, 'id version titles levels')
+        for k in ('id','version'):
+            if not isinstance(campaign[k],str) or not re.fullmatch('[a-z][a-z0-9-]{0,39}',campaign[k]) or campaign[k]=='free': c.fail()
+        c.exact(campaign['titles'],'en zh-CN')
+        for title in campaign['titles'].values(): c.text(title,100)
+        if not isinstance(campaign['levels'],list) or len(campaign['levels']) != 3: c.fail()
+        known={p['id']:p for p in v['plans']}; ids=set(); previous=0; threshold=0
+        for level in campaign['levels']:
+            c.exact(level,'id titles planId requiredCorrect')
+            if not isinstance(level['id'],str) or not re.fullmatch('[a-z][a-z0-9-]{0,39}',level['id']) or level['id'] in ids or level['id']=='free' or level['planId'] not in known: c.fail()
+            ids.add(level['id']); c.exact(level['titles'],'en zh-CN')
+            for title in level['titles'].values(): c.text(title,100)
+            difficulty=sum(x['difficulty'] for x in known[level['planId']]['slots'])
+            if difficulty<=previous or type(level['requiredCorrect']) is not int or not max(1,threshold)<=level['requiredCorrect']<=5: c.fail()
+            previous=difficulty;threshold=level['requiredCorrect']
     return pack, text_review, when, v
 
 
@@ -48,14 +64,16 @@ def export(candidate, review, classification, output):
     if output.exists(): c.fail('Output exists')
     files = {}
     for locale in c.LOCALES:
-        document = c.document(pack, locale); document['schemaVersion'] = 3
+        document = c.document(pack, locale); document['schemaVersion'] = 4 if v['schemaVersion']==2 else 3
         for row, tag in zip(document['questions'], v['questions']):
             row.update(category=tag['category'], difficulty=tag['difficulty'], reviewedBy=text_review['reviewedBy'], reviewedAtMillis=when)
         document['plans'] = [dict(id=p['id'], title=p['titles'][locale], slots=p['slots']) for p in v['plans']]
+        if v['schemaVersion']==2:
+            campaign=v['campaign'];document['campaign']=dict(id=campaign['id'],version=campaign['version'],title=campaign['titles'][locale],levels=[dict(id=l['id'],title=l['titles'][locale],planId=l['planId'],requiredCorrect=l['requiredCorrect']) for l in campaign['levels']])
         files[locale + '.document.json'] = c.encode(document)
     receipt = dict(classificationSha256=hashlib.sha256(Path(classification).read_bytes()).hexdigest(),
                    candidateSha256=v['candidateSha256'], reviewSha256=v['reviewSha256'],
-                   suggestedPackVersion='world-foundations-r2-routes', schemaVersion=3,
+                   suggestedPackVersion='world-foundations-r3-journey' if v['schemaVersion']==2 else 'world-foundations-r2-routes', schemaVersion=4 if v['schemaVersion']==2 else 3,
                    difficultyBasis=v['difficultyBasis'], playerCalibrated=False, reviewedBy=v['reviewedBy'],
                    deploymentApproved=False, databaseAccessed=False, audioListened=False,
                    files={n:hashlib.sha256(b).hexdigest() for n,b in files.items()})

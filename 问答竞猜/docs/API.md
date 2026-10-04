@@ -31,3 +31,7 @@ GET `/api/quiz/me/capabilities` reports whether the candidate processor is confi
 
 ## B20 审核路线
 新增身份保护GET `/api/quiz/challenges?locale=en|zh-CN`，返回version、locale、plans（仅题类/难度/标题）。POST开局可选同时提供challengeId、challengeVersion，省略二者保持自由挑战；版本变化/路线缺失409，参数不完整400，同幂等键变更选择409。快照新增可空challenge、challengeVersion，不含后续题目或答案。详情见CHALLENGE-PLANS.md。
+
+
+## B21 持久章节
+新增身份保护GET `/api/quiz/journey?locale=en|zh-CN`，返回版本化三章元数据与当前身份范围完成/解锁记录。POST开局可选chapterId+challengeVersion，与challengeId互斥，锁定章409；快照新增chapter及可空chapterPassed（完整结算后有布尔结果）。进度与分数同事务，详见CHAPTER-JOURNEY.md。

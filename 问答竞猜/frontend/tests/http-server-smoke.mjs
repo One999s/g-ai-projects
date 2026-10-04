@@ -4,6 +4,7 @@ import {randomUUID,webcrypto} from 'node:crypto'
 import {createNarrationPlayer} from '../src/narration.js'
 import {createQuizApi} from '../src/server-api.js'
 import {validateSnapshot,validateVoiceCandidate} from '../src/server-state.js'
+import {validateJourney} from '../src/journey.js'
 import {validateCatalog} from '../src/challenges.js'
 import {validateRecord} from '../src/server-record.js'
 import {encodeWave} from '../src/voice-recorder.js'
@@ -11,8 +12,8 @@ const origin=process.argv[2]
 assert.match(origin,/^http:\/\/127\.0\.0\.1:\d+$/)
 const api=createQuizApi({base:origin+'/api/quiz',fetcher:(url,options)=>fetch(url,{...options,headers:{...options.headers,'X-Test-Actor':'owner'}})})
 assert.equal(validateRecord(await api.record()).progress.gamesPlayed,0)
-const catalog=validateCatalog(await api.challenges('en'),'en');assert.equal(catalog.plans.length,1);const challenge={id:catalog.plans[0].id,version:catalog.version}
-const creation='create-'+randomUUID();let s=validateSnapshot(await api.create('en',creation,challenge));assert.equal(s.challenge.id,challenge.id)
+const catalog=validateCatalog(await api.challenges('en'),'en');assert.equal(catalog.plans.length,4);const journey=validateJourney(await api.journey('en'),'en');assert.equal(journey.levels[1].unlocked,false);const challenge={chapterId:journey.levels[0].id,version:journey.version}
+const creation='create-'+randomUUID();let s=validateSnapshot(await api.create('en',creation,challenge));assert.equal(s.chapter.levelId,challenge.chapterId)
 assert.equal(s.phase,'LOADING');assert.equal(s.reveal,null);assert.equal(s.options.length,0);assert.equal(s.question,null);assert.equal('answer'in s,false)
 assert.equal((await api.create('en',creation,challenge)).sessionId,s.sessionId)
 for(let i=0;i<5;i++){
@@ -28,7 +29,7 @@ for(let i=0;i<5;i++){
  const replay=await api.answer(s.sessionId,s.roundId,2,key);assert.deepEqual(replay.result,a.result)
  s=validateSnapshot(await api.next(s.sessionId,s.roundId))
 }
-assert.equal(s.phase,'FINISHED');assert.equal(s.score,750)
+assert.equal(s.phase,'FINISHED');assert.equal(s.score,750);assert.equal(s.chapterPassed,true);const after=validateJourney(await api.journey('en'),'en');assert.equal(after.levels[0].passed,true);assert.equal(after.levels[1].unlocked,true);assert.equal(after.levels[2].unlocked,false)
 const progress=await api.progress();assert.equal(progress.gamesPlayed,1);assert.equal(progress.totalScore,750)
 const history=await api.archive();assert.equal(history.length,1);assert.equal(history[0].sessionId,s.sessionId)
 const record=validateRecord(await api.record());assert.equal(record.progress.gamesPlayed,1);assert.equal(record.progress.totalScore,750);assert.equal(record.recent[0].sessionId,s.sessionId)

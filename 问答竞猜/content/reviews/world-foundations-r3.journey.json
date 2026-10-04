@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 2,
+  "candidateSha256": "8c7e21216889069f496b47b95ea5992a8ba90a0388f6e143a8fde3015fbfa434",
+  "reviewSha256": "962eca801a07c347d9f1372170efe324458d79130b9d5652507a5a7b3e1afe93",
+  "reviewedBy": "assistant:editorial-route-review",
+  "difficultyBasis": "editorial-estimate-1-foundation-2-familiar-3-specialist",
+  "playerCalibrated": false,
+  "questions": [
+    {
+      "id": "world-001",
+      "category": "space",
+      "difficulty": 1,
+      "rationale": "Widely taught planet superlative"
+    },
+    {
+      "id": "world-002",
+      "category": "space",
+      "difficulty": 1,
+      "rationale": "Basic Solar System ordering"
+    },
+    {
+      "id": "world-003",
+      "category": "space",
+      "difficulty": 2,
+      "rationale": "Requires atmospheric-composition knowledge"
+    },
+    {
+      "id": "world-004",
+      "category": "space",
+      "difficulty": 2,
+      "rationale": "Requires linking oxidation to planetary color"
+    },
+    {
+      "id": "world-005",
+      "category": "space",
+      "difficulty": 3,
+      "rationale": "Specific moon association"
+    },
+    {
+      "id": "world-006",
+      "category": "space",
+      "difficulty": 1,
+      "rationale": "Basic star-versus-planet distinction"
+    },
+    {
+      "id": "world-007",
+      "category": "ocean",
+      "difficulty": 1,
+      "rationale": "Common geographical superlative"
+    },
+    {
+      "id": "world-008",
+      "category": "ocean",
+      "difficulty": 2,
+      "rationale": "Specific deep-ocean location"
+    },
+    {
+      "id": "world-009",
+      "category": "measurement",
+      "difficulty": 2,
+      "rationale": "School-level unit association"
+    },
+    {
+      "id": "world-010",
+      "category": "measurement",
+      "difficulty": 3,
+      "rationale": "Less common amount-of-substance unit"
+    },
+    {
+      "id": "world-011",
+      "category": "measurement",
+      "difficulty": 2,
+      "rationale": "Distinguishes absolute-temperature base unit"
+    },
+    {
+      "id": "world-012",
+      "category": "measurement",
+      "difficulty": 1,
+      "rationale": "Everyday metric length unit"
+    },
+    {
+      "id": "world-013",
+      "category": "heritage",
+      "difficulty": 1,
+      "rationale": "Widely recognized landmark country"
+    },
+    {
+      "id": "world-014",
+      "category": "heritage",
+      "difficulty": 2,
+      "rationale": "Less immediately familiar archaeological location"
+    },
+    {
+      "id": "world-015",
+      "category": "heritage",
+      "difficulty": 3,
+      "rationale": "More specialized archaeological location"
+    },
+    {
+      "id": "world-016",
+      "category": "heritage",
+      "difficulty": 2,
+      "rationale": "Specific Southeast Asian heritage location"
+    },
+    {
+      "id": "world-017",
+      "category": "heritage",
+      "difficulty": 1,
+      "rationale": "Widely recognized Egyptian landmark"
+    },
+    {
+      "id": "world-018",
+      "category": "heritage",
+      "difficulty": 3,
+      "rationale": "Specific archipelago sovereignty knowledge"
+    },
+    {
+      "id": "world-019",
+      "category": "heritage",
+      "difficulty": 1,
+      "rationale": "Commonly recognized British landmark"
+    },
+    {
+      "id": "world-020",
+      "category": "heritage",
+      "difficulty": 2,
+      "rationale": "Classical landmark city-country association"
+    }
+  ],
+  "plans": [
+    {
+      "id": "world-rising",
+      "titles": {
+        "zh-CN": "环球进阶 · 从星空到世界",
+        "en": "World ascent · from stars to our world"
+      },
+      "slots": [
+        {
+          "category": "space",
+          "difficulty": 1
+        },
+        {
+          "category": "ocean",
+          "difficulty": 1
+        },
+        {
+          "category": "heritage",
+          "difficulty": 2
+        },
+        {
+          "category": "measurement",
+          "difficulty": 2
+        },
+        {
+          "category": "space",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "heritage-trail",
+      "titles": {
+        "zh-CN": "遗产之旅 · 五站探索",
+        "en": "Heritage trail · five discoveries"
+      },
+      "slots": [
+        {
+          "category": "heritage",
+          "difficulty": 1
+        },
+        {
+          "category": "heritage",
+          "difficulty": 1
+        },
+        {
+          "category": "heritage",
+          "difficulty": 2
+        },
+        {
+          "category": "heritage",
+          "difficulty": 2
+        },
+        {
+          "category": "heritage",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "id": "first-light-route",
+      "titles": {
+        "zh-CN": "启程 · 基础之光",
+        "en": "First light · foundations"
+      },
+      "slots": [
+        {
+          "category": "space",
+          "difficulty": 1
+        },
+        {
+          "category": "space",
+          "difficulty": 1
+        },
+        {
+          "category": "ocean",
+          "difficulty": 1
+        },
+        {
+          "category": "heritage",
+          "difficulty": 1
+        },
+        {
+          "category": "measurement",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "id": "final-horizon-route",
+      "titles": {
+        "zh-CN": "远方 · 深入探索",
+        "en": "Final horizon · deeper discoveries"
+      },
+      "slots": [
+        {
+          "category": "heritage",
+          "difficulty": 2
+        },
+        {
+          "category": "measurement",
+          "difficulty": 2
+        },
+        {
+          "category": "space",
+          "difficulty": 3
+        },
+        {
+          "category": "heritage",
+          "difficulty": 3
+        },
+        {
+          "category": "measurement",
+          "difficulty": 3
+        }
+      ]
+    }
+  ],
+  "campaign": {
+    "id": "world-journey",
+    "version": "r1",
+    "titles": {
+      "zh-CN": "环球知识旅程",
+      "en": "The world knowledge journey"
+    },
+    "levels": [
+      {
+        "id": "first-light",
+        "titles": {
+          "zh-CN": "第一章 · 初见世界",
+          "en": "Chapter 1 · first discoveries"
+        },
+        "planId": "first-light-route",
+        "requiredCorrect": 3
+      },
+      {
+        "id": "world-ascent",
+        "titles": {
+          "zh-CN": "第二章 · 跨越山海",
+          "en": "Chapter 2 · world ascent"
+        },
+        "planId": "world-rising",
+        "requiredCorrect": 3
+      },
+      {
+        "id": "final-horizon",
+        "titles": {
+          "zh-CN": "第三章 · 探向远方",
+          "en": "Chapter 3 · final horizon"
+        },
+        "planId": "final-horizon-route",
+        "requiredCorrect": 4
+      }
+    ]
+  }
+}

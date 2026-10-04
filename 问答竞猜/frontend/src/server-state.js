@@ -1,3 +1,4 @@
+import {validateChapter} from './journey.js'
 import {validatePlan} from './challenges.js'
 import {QuizApiError} from './server-api.js'
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -14,7 +15,8 @@ export function validateSnapshot(s){
  if(['LOADING','READING','ANSWERING'].includes(s.phase)&&s.reveal!==null)bad()
  if(['REVEALING','FINISHED'].includes(s.phase)&&s.reveal===null)bad()
  if(s.challenge!=null){try{validatePlan(s.challenge)}catch{bad()}if(typeof s.challengeVersion!=='string'||!s.challengeVersion.trim()||s.challengeVersion.length>100)bad()}else if(s.challengeVersion!=null)bad()
- return Object.freeze({...s,challenge:s.challenge?validatePlan(s.challenge):null,options:Object.freeze([...s.options]),eliminated:Object.freeze([...s.eliminated]),reveal:s.reveal?Object.freeze({...s.reveal}):null})
+ if(s.chapter!=null){try{validateChapter(s.chapter)}catch{bad()}if(!s.challenge||(s.phase==='FINISHED'&&s.chapterPassed===null)||(s.chapterPassed!==null&&typeof s.chapterPassed!=='boolean')||(s.chapterPassed!==null&&(!['REVEALING','FINISHED'].includes(s.phase)||s.roundNumber!==5)))bad()}else if(s.chapterPassed!=null)bad()
+ return Object.freeze({...s,chapter:s.chapter?validateChapter(s.chapter):null,challenge:s.challenge?validatePlan(s.challenge):null,options:Object.freeze([...s.options]),eliminated:Object.freeze([...s.eliminated]),reveal:s.reveal?Object.freeze({...s.reveal}):null})
 }
 export function isNewer(current,next){if(!current)return true;if(current.sessionId!==next.sessionId)return false;return next.revision>current.revision||(next.revision===current.revision&&next.serverNow>=current.serverNow)}
 export function commandResolved(command,s){if(!command||command.sessionId!==s.sessionId)return false;if(['ABANDONED','FINISHED'].includes(s.phase))return true;if(command.roundId&&command.roundId!==s.roundId)return true;if(command.kind==='answer')return s.phase==='REVEALING';if(command.kind==='ready')return s.phase!=='LOADING';if(command.kind==='fifty')return s.lifelineUsed;return false}

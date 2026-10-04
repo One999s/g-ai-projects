@@ -52,11 +52,28 @@ public final class ApprovedQuestionBank {
   }
 
   public record PackDocument(
-      int schemaVersion, List<ReviewedQuestion> questions, List<ChallengePlan> plans) {
+      int schemaVersion,
+      List<ReviewedQuestion> questions,
+      List<ChallengePlan> plans,
+      Campaign campaign) {
+    public PackDocument(
+        int schemaVersion, List<ReviewedQuestion> questions, List<ChallengePlan> plans) {
+      this(schemaVersion, questions, plans, null);
+    }
+
     public PackDocument(int schemaVersion, List<ReviewedQuestion> questions) {
-      this(schemaVersion, questions, null);
+      this(schemaVersion, questions, null, null);
     }
   }
+
+  public record Journey(
+      String version,
+      String locale,
+      Campaign campaign,
+      String definitionHash,
+      List<ChallengePlan> plans) {}
+
+  public record ChapterSelection(Selection selection, CampaignChapter chapter) {}
 
   public record Catalog(String version, String locale, List<ChallengePlan> plans) {}
 
@@ -115,7 +132,7 @@ public final class ApprovedQuestionBank {
               MessageDigest.getInstance("SHA-256").digest(bytes),
               HexFormat.of().parseHex(row.hash))) throw new IllegalArgumentException();
       PackDocument pack = json.readValue(bytes, PackDocument.class);
-      if (!Set.of(2, 3).contains(pack.schemaVersion())
+      if (!Set.of(2, 3, 4).contains(pack.schemaVersion())
           || pack.questions() == null
           || pack.questions().size() < 5
           || pack.questions().size() > 500) throw new IllegalArgumentException();
@@ -149,7 +166,7 @@ public final class ApprovedQuestionBank {
               || uri.getHost() == null
               || uri.getUserInfo() != null) throw new IllegalArgumentException();
         }
-        if (pack.schemaVersion() == 3)
+        if (pack.schemaVersion() >= 3)
           new ChallengePlan.Slot(
               item.category(), item.difficulty() == null ? 0 : item.difficulty());
         else if (item.category() != null || item.difficulty() != null)
@@ -167,6 +184,10 @@ public final class ApprovedQuestionBank {
           choose(pack, plan); // Every advertised plan must have five distinct matching questions.
         }
       }
+      if (pack.schemaVersion() == 4) {
+        if (pack.campaign() == null) throw new IllegalArgumentException();
+        definitionHash(pack);
+      } else if (pack.campaign() != null) throw new IllegalArgumentException();
       return new Loaded(row, pack);
     } catch (Exception invalid) {
       throw new RuleException("QUESTION_BANK_INVALID", 503);
@@ -201,6 +222,85 @@ public final class ApprovedQuestionBank {
     }
     return new Selection(
         loaded.row.version, locale, loaded.row.hash, now, choose(loaded.pack, plan), plan);
+  }
+
+  public Journey journey(String locale, long now) {
+    var loaded = load(locale, now);
+    return new Journey(
+        loaded.row.version,
+        locale,
+        loaded.pack.campaign(),
+        loaded.pack.campaign() == null ? null : definitionHash(loaded.pack),
+        loaded.pack.plans() == null ? List.of() : loaded.pack.plans());
+  }
+
+  public ChapterSelection selectChapter(String locale, long now, String levelId, String version) {
+    validateChoice(levelId, version);
+    var loaded = load(locale, now);
+    if (!loaded.row.version.equals(version))
+      throw new RuleException("CHALLENGE_CATALOG_CHANGED", 409);
+    var campaign = loaded.pack.campaign();
+    if (campaign == null) throw new RuleException("CHAPTER_UNAVAILABLE", 409);
+    for (int i = 0; i < campaign.levels().size(); i++) {
+      var level = campaign.levels().get(i);
+      if (!level.id().equals(levelId)) continue;
+      var plan =
+          loaded.pack.plans().stream()
+              .filter(p -> p.id().equals(level.planId()))
+              .findFirst()
+              .orElseThrow();
+      return new ChapterSelection(
+          new Selection(
+              loaded.row.version, locale, loaded.row.hash, now, choose(loaded.pack, plan), plan),
+          new CampaignChapter(
+              campaign.id(),
+              campaign.version(),
+              definitionHash(loaded.pack),
+              campaign.title(),
+              level.id(),
+              level.title(),
+              i + 1,
+              3,
+              level.requiredCorrect(),
+              campaign.levels().subList(0, i).stream().map(Campaign.Level::id).toList()));
+    }
+    throw new RuleException("CHAPTER_UNAVAILABLE", 409);
+  }
+
+  private String definitionHash(PackDocument pack) {
+    var c = pack.campaign();
+    var canonical = new StringBuilder(c.id()).append('\n').append(c.version()).append('\n');
+    int previous = 0, threshold = 0;
+    for (var level : c.levels()) {
+      var plan =
+          pack.plans().stream()
+              .filter(p -> p.id().equals(level.planId()))
+              .findFirst()
+              .orElseThrow();
+      int difficulty = plan.slots().stream().mapToInt(ChallengePlan.Slot::difficulty).sum();
+      if (difficulty <= previous || level.requiredCorrect() < threshold)
+        throw new IllegalArgumentException("Campaign must progress");
+      previous = difficulty;
+      threshold = level.requiredCorrect();
+      canonical
+          .append(level.id())
+          .append('|')
+          .append(plan.id())
+          .append('|')
+          .append(level.requiredCorrect())
+          .append('|');
+      for (var slot : plan.slots())
+        canonical.append(slot.category()).append(':').append(slot.difficulty()).append(';');
+      canonical.append('\n');
+    }
+    try {
+      return HexFormat.of()
+          .formatHex(
+              MessageDigest.getInstance("SHA-256")
+                  .digest(canonical.toString().getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   public static void validateChoice(String id, String version) {

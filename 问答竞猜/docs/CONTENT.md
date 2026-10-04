@@ -17,3 +17,6 @@ ApprovedQuestionBank只读quiz_question_packs/quiz_question_audit。在同一SQL
 ## B11 公开双语与英文试听候选
 
 content/README.md说明20道配对公开开发题和官方来源、草稿导出约束、20条实际离线英文合成文件及测量边界。中文音频未生成，所有人工审阅和音频试听保持pending。公开开发答案不是保密运营题库；这批内容不进入生产DB/JAR运行资源，server前端也不加载它。
+
+
+B21另支持schema4三章定义，规则hash按标识、槽位、门槛计算且忽略语言/标题，双语可共享章节进度。20题的编辑难度与三章3/3/4通关门槛均为assistant编辑设计，未经真实玩家校准；导出器不批准部署或音频。详见CHAPTER-JOURNEY.md。

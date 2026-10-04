@@ -33,6 +33,16 @@ public final class GameService {
 
   public GameRules.SessionView create(
       VerifiedAccess access, String locale, String key, String planId, String version) {
+    return create(access, locale, key, planId, version, null);
+  }
+
+  public GameRules.SessionView create(
+      VerifiedAccess access,
+      String locale,
+      String key,
+      String planId,
+      String version,
+      String chapterId) {
     if (locale == null) throw new RuleException("UNSUPPORTED_LOCALE", 400);
     var s =
         store.createAtomic(
@@ -41,17 +51,95 @@ public final class GameService {
             key,
             planId,
             version,
+            chapterId,
             access::assertCurrent,
             () -> {
-              var pack = bank.select(locale, clock.millis(), planId, version);
+              var chosenChapter =
+                  chapterId == null
+                      ? null
+                      : bank.selectChapter(locale, clock.millis(), chapterId, version);
+              var pack =
+                  chosenChapter == null
+                      ? bank.select(locale, clock.millis(), planId, version)
+                      : chosenChapter.selection();
               access.assertCurrent();
               var session =
                   rules.create(
                       access.player(), locale, pack.version(), pack.questions(), clock.millis());
               session.challenge = pack.challenge();
+              session.chapter = chosenChapter == null ? null : chosenChapter.chapter();
               return session;
             });
     return current(access, s.id);
+  }
+
+  public record LevelView(
+      String id,
+      String title,
+      int index,
+      int requiredCorrect,
+      List<ChallengePlan.Slot> slots,
+      boolean unlocked,
+      boolean passed,
+      int attempts,
+      int bestScore,
+      int bestCorrect) {}
+
+  public record JourneyView(
+      String version,
+      String locale,
+      String campaignId,
+      String campaignVersion,
+      String title,
+      String definitionHash,
+      List<LevelView> levels) {}
+
+  public JourneyView journey(VerifiedAccess access, String locale) {
+    access.assertCurrent();
+    var j = bank.journey(locale, clock.millis());
+    if (j.campaign() == null) {
+      access.assertCurrent();
+      return new JourneyView(j.version(), locale, null, null, null, null, List.of());
+    }
+    var c = j.campaign();
+    var progress = store.chapterProgress(access.player(), c.id(), c.version(), j.definitionHash());
+    var levels = new java.util.ArrayList<LevelView>();
+    boolean unlocked = true;
+    for (int i = 0; i < 3; i++) {
+      var l = c.levels().get(i);
+      int index = i + 1;
+      var p = progress.stream().filter(x -> x.index() == index).findFirst().orElse(null);
+      if (p != null
+          && (!p.id().equals(l.id())
+              || !unlocked
+              || p.passed() != (p.bestCorrect() >= l.requiredCorrect())))
+        throw new RuleException("CHAPTER_PROGRESS_INVALID", 503);
+      var plan =
+          j.plans().stream().filter(x -> x.id().equals(l.planId())).findFirst().orElseThrow();
+      boolean passed = p != null && p.passed();
+      levels.add(
+          new LevelView(
+              l.id(),
+              l.title(),
+              index,
+              l.requiredCorrect(),
+              plan.slots(),
+              unlocked,
+              passed,
+              p == null ? 0 : p.attempts(),
+              p == null ? 0 : p.bestScore(),
+              p == null ? 0 : p.bestCorrect()));
+      unlocked = unlocked && passed;
+    }
+    access.assertCurrent();
+    return new JourneyView(
+        j.version(),
+        locale,
+        c.id(),
+        c.version(),
+        c.title(),
+        j.definitionHash(),
+        List.copyOf(levels));
   }
 
   private <T> T locked(VerifiedAccess access, String id, Function<GameSession, T> action) {

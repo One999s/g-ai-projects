@@ -39,8 +39,10 @@ public final class JdbcGameStore {
     try {
       var envelope = json.readValue(row.state, StateEnvelope.class);
       var s = envelope.state();
-      if (!Set.of(3, 4).contains(envelope.schemaVersion())
+      if (!Set.of(3, 4, 5).contains(envelope.schemaVersion())
           || (envelope.schemaVersion() == 3 && s != null && s.challenge != null)
+          || (envelope.schemaVersion() < 5 && s != null && s.chapter != null)
+          || (s != null && s.chapter != null && s.challenge == null)
           || s == null
           || !row.id.equals(s.id)
           || s.player == null
@@ -152,7 +154,7 @@ public final class JdbcGameStore {
                 candidate.bankVersion,
                 "ACTIVE",
                 candidate.revision,
-                encode(new StateEnvelope(4, candidate)),
+                encode(new StateEnvelope(5, candidate)),
                 candidate.createdAt,
                 candidate.createdAt,
                 candidate.expiresAt,
@@ -171,8 +173,11 @@ public final class JdbcGameStore {
             if (!saved.locale.equals(candidate.locale)
                 || !sameChoice(
                     saved,
-                    candidate.challenge == null ? null : candidate.challenge.id(),
-                    candidate.challenge == null ? null : candidate.bankVersion))
+                    candidate.challenge == null || candidate.chapter != null
+                        ? null
+                        : candidate.challenge.id(),
+                    candidate.challenge == null ? null : candidate.bankVersion,
+                    candidate.chapter == null ? null : candidate.chapter.levelId()))
               throw new RuleException("IDEMPOTENCY_CONFLICT", 409);
             return saved;
           }
@@ -224,7 +229,7 @@ public final class JdbcGameStore {
                             + " WHERE session_id=? AND site_id=? AND site_user_id=? AND revision=?",
                         rowStatus(s),
                         s.revision,
-                        encode(new StateEnvelope(4, s)),
+                        encode(new StateEnvelope(5, s)),
                         System.currentTimeMillis(),
                         due(s),
                         s.id,
@@ -253,7 +258,13 @@ public final class JdbcGameStore {
     return createAtomic(player, locale, creationKey, null, null, authorization, factory);
   }
 
-  private static boolean sameChoice(GameSession s, String planId, String version) {
+  private static boolean sameChoice(
+      GameSession s, String planId, String version, String chapterId) {
+    if (chapterId != null)
+      return s.chapter != null
+          && s.chapter.levelId().equals(chapterId)
+          && s.bankVersion.equals(version);
+    if (s.chapter != null) return false;
     return planId == null
         ? s.challenge == null
         : s.challenge != null && s.challenge.id().equals(planId) && s.bankVersion.equals(version);
@@ -267,7 +278,21 @@ public final class JdbcGameStore {
       String version,
       Runnable authorization,
       java.util.function.Supplier<GameSession> factory) {
-    ApprovedQuestionBank.validateChoice(planId, version);
+    return createAtomic(player, locale, creationKey, planId, version, null, authorization, factory);
+  }
+
+  public GameSession createAtomic(
+      Player player,
+      String locale,
+      String creationKey,
+      String planId,
+      String version,
+      String chapterId,
+      Runnable authorization,
+      java.util.function.Supplier<GameSession> factory) {
+    if (chapterId != null && planId != null)
+      throw new RuleException("INVALID_CHALLENGE_SELECTION", 400);
+    ApprovedQuestionBank.validateChoice(chapterId == null ? planId : chapterId, version);
     key(creationKey);
     if (player == null) throw new RuleException("AUTHENTICATION_REQUIRED", 401);
     if (!Set.of("en", "zh-CN").contains(locale)) throw new RuleException("UNSUPPORTED_LOCALE", 400);
@@ -284,14 +309,15 @@ public final class JdbcGameStore {
           GameSession result;
           if (!found.isEmpty()) {
             result = decode(found.get(0));
-            if (!result.locale.equals(locale) || !sameChoice(result, planId, version))
+            if (!result.locale.equals(locale) || !sameChoice(result, planId, version, chapterId))
               throw new RuleException("IDEMPOTENCY_CONFLICT", 409);
           } else {
             var candidate = factory.get();
             if (!player.equals(candidate.player)
                 || !locale.equals(candidate.locale)
-                || !sameChoice(candidate, planId, version))
+                || !sameChoice(candidate, planId, version, chapterId))
               throw new IllegalStateException("QUIZ_SCOPE_MUTATION_REJECTED");
+            if (candidate.chapter != null) requireUnlocked(player, candidate.chapter);
             result = create(candidate, creationKey);
           }
           authorization.run();
@@ -335,6 +361,29 @@ public final class JdbcGameStore {
         s.bestStreak,
         s.player.siteId(),
         s.player.siteUserId());
+    if (s.chapter != null) {
+      var c = s.chapter;
+      db.update(
+          "INSERT INTO"
+              + " quiz_chapter_progress(site_id,site_user_id,definition_sha256,campaign_id,campaign_version,level_index,level_id,passed,attempts,best_score,best_correct,last_completed_at_ms)"
+              + " VALUES(?,?,?,?,?,?,?,?,1,?,?,?) ON DUPLICATE KEY UPDATE passed=(passed OR"
+              + " ?),attempts=attempts+1,best_score=GREATEST(best_score,?),best_correct=GREATEST(best_correct,?),last_completed_at_ms=GREATEST(last_completed_at_ms,?)",
+          s.player.siteId(),
+          s.player.siteUserId(),
+          c.definitionHash(),
+          c.campaignId(),
+          c.campaignVersion(),
+          c.index(),
+          c.levelId(),
+          correct >= c.requiredCorrect(),
+          s.score,
+          correct,
+          completed,
+          correct >= c.requiredCorrect(),
+          s.score,
+          correct,
+          completed);
+    }
     String eventId = "quiz.completed:" + s.id;
     var event =
         Map.of(
@@ -364,6 +413,74 @@ public final class JdbcGameStore {
         "game.completed",
         encode(event),
         completed);
+  }
+
+  public record ChapterProgress(
+      int index, String id, boolean passed, int attempts, int bestScore, int bestCorrect) {}
+
+  public List<ChapterProgress> chapterProgress(
+      Player player, String campaignId, String campaignVersion, String hash) {
+    return db.query(
+        "SELECT"
+            + " level_index,level_id,passed,attempts,best_score,best_correct,campaign_id,campaign_version"
+            + " FROM quiz_chapter_progress WHERE site_id=? AND site_user_id=? AND"
+            + " definition_sha256=? ORDER BY level_index",
+        (r, n) -> {
+          var p =
+              new ChapterProgress(
+                  r.getInt(1),
+                  r.getString(2),
+                  r.getBoolean(3),
+                  r.getInt(4),
+                  r.getInt(5),
+                  r.getInt(6));
+          if (p.index() < 1
+              || p.index() > 3
+              || p.attempts() < 1
+              || p.bestScore() < 0
+              || p.bestScore() > 750
+              || p.bestCorrect() < 0
+              || p.bestCorrect() > 5
+              || !campaignId.equals(r.getString(7))
+              || !campaignVersion.equals(r.getString(8)))
+            throw new RuleException("CHAPTER_PROGRESS_INVALID", 503);
+          return p;
+        },
+        player.siteId(),
+        player.siteUserId(),
+        hash);
+  }
+
+  /**
+   * Called inside createAtomic; serialize chapter gates with completion using the owned user row.
+   */
+  private void requireUnlocked(Player player, CampaignChapter chapter) {
+    if (!org.springframework.transaction.support.TransactionSynchronizationManager
+        .isActualTransactionActive())
+      throw new IllegalStateException("Chapter gate requires transaction");
+    db.update(
+        "INSERT INTO"
+            + " quiz_progress(site_id,site_user_id,games_played,best_score,total_score,correct_answers,best_streak)"
+            + " VALUES(?,?,0,0,0,0,0) ON DUPLICATE KEY UPDATE site_id=site_id",
+        player.siteId(),
+        player.siteUserId());
+    db.queryForObject(
+        "SELECT games_played FROM quiz_progress WHERE site_id=? AND site_user_id=? FOR UPDATE",
+        Integer.class,
+        player.siteId(),
+        player.siteUserId());
+    var progress =
+        chapterProgress(
+            player, chapter.campaignId(), chapter.campaignVersion(), chapter.definitionHash());
+    for (int i = 1; i < chapter.index(); i++) {
+      int index = i;
+      if (progress.stream()
+          .noneMatch(
+              p ->
+                  p.index() == index
+                      && p.id().equals(chapter.priorLevelIds().get(index - 1))
+                      && p.passed())) throw new RuleException("CHAPTER_LOCKED", 409);
+    }
   }
 
   public record RecordView(Progress progress, List<Archive> recent, int limit) {}

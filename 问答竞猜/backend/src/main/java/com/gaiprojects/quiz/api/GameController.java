@@ -35,7 +35,11 @@ public final class GameController {
   }
 
   public record CreateRequest(
-      String locale, String idempotencyKey, String challengeId, String challengeVersion) {}
+      String locale,
+      String idempotencyKey,
+      String challengeId,
+      String challengeVersion,
+      String chapterId) {}
 
   public record AnswerRequest(Integer choice, String idempotencyKey) {}
 
@@ -49,7 +53,13 @@ public final class GameController {
                 body.locale(),
                 body.idempotencyKey(),
                 body.challengeId(),
-                body.challengeVersion()));
+                body.challengeVersion(),
+                body.chapterId()));
+  }
+
+  @GetMapping("/journey")
+  public ApiEnvelope journey(@RequestParam String locale, HttpServletRequest req) {
+    return ok(req, game().journey(access(req), locale));
   }
 
   @GetMapping("/challenges")

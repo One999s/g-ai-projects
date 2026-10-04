@@ -198,7 +198,14 @@ public final class GameRules {
         hidden ? Set.of() : Set.copyOf(s.eliminated),
         hidden ? null : result,
         s.challenge,
-        s.challenge == null ? null : s.bankVersion);
+        s.challenge == null ? null : s.bankVersion,
+        s.chapter,
+        s.chapter == null || s.results.size() != 5
+            ? null
+            : s.results.stream()
+                    .filter(r -> r.selected() != null && r.selected() == r.correct())
+                    .count()
+                >= s.chapter.requiredCorrect());
   }
 
   /**
@@ -224,5 +231,7 @@ public final class GameRules {
       Set<Integer> eliminated,
       GameSession.Result reveal,
       ChallengePlan challenge,
-      String challengeVersion) {}
+      String challengeVersion,
+      CampaignChapter chapter,
+      Boolean chapterPassed) {}
 }
