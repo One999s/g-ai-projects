@@ -174,3 +174,10 @@
 - 仅追加V002及quiz_chapter_progress表，运行权限SELECT/INSERT/UPDATE，V001不变；精确SQL交AIhub更新2迁移/7表双顺序共库fixture，不能将本地H2成绩代称共享MySQL结果
 - 本地224=147pass+77专项skip，HTTP21含实际JS五题750分与三章失败/重玩全链路；前端177、Python45及构建通过。首次HTTP失败为测试清理遗漏新表，补全后全量通过；发布前同步拒绝保留字free，修正后题包31条定向、前端与Python重测通过
 - 运行/版本/回滚与外部验收边界见CHAPTER-JOURNEY.md。新增实MySQL预期65、Redis11由本批CI执行；没有真实生产迁移、身份或听音批准
+
+
+## B21 CI修复 · 确定性旁白超时合同
+- abb94612的6项验证通过（含MySQL65、Redis11），release-bundle重复前端验证中正向旁白用例失败：测试100ms预算小于CI首次Response/WebCrypto初始化318ms；不是生产3000ms预算的失败证据
+- 用固定250ms合成digest延迟复现：100ms测试预算准备失败、3000ms生产预算成功。随后仅调整测试时钟与fixture，生产旁白代码、超时和服务器窗口完全不变
+- 每个旁白用例采用Node测试虚拟setTimeout；专用负例明确在9ms未关闭、10ms准时取消，新增晚到digest不能复活音频。保留真实hash/Response验证，没有跳过、放宽超时负例或仅重跑CI
+- 本地旁白12/12及完整前端69 Node+109 DOM=178、构建通过；本次CI仍从新提交重跑全部7项，不能沿用旧打包成功结论
