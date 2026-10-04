@@ -340,6 +340,24 @@ public final class JdbcGameStore {
         completed);
   }
 
+  public record RecordView(Progress progress, List<Archive> recent, int limit) {}
+
+  /** One MVCC snapshot: a concurrent settlement cannot split counters from completed history. */
+  public RecordView record(Player player, Runnable authorization) {
+    var snapshot = new TransactionTemplate(Objects.requireNonNull(tx.getTransactionManager()));
+    snapshot.setPropagationBehaviorName("PROPAGATION_REQUIRES_NEW");
+    snapshot.setIsolationLevelName("ISOLATION_REPEATABLE_READ");
+    snapshot.setReadOnly(true);
+    snapshot.setTimeout(5);
+    return snapshot.execute(
+        status -> {
+          authorization.run();
+          var result = new RecordView(progress(player), List.copyOf(archive(player, 20)), 20);
+          authorization.run();
+          return result;
+        });
+  }
+
   public record Progress(
       int gamesPlayed, int bestScore, long totalScore, int correctAnswers, int bestStreak) {}
 

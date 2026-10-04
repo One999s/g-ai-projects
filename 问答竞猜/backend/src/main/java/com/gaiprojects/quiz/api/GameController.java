@@ -81,6 +81,11 @@ public final class GameController {
     return ok(req, game().abandon(access(req), id));
   }
 
+  @GetMapping("/me/record")
+  public ApiEnvelope record(HttpServletRequest req) {
+    return ok(req, game().record(access(req)));
+  }
+
   @GetMapping("/me/progress")
   public ApiEnvelope progress(HttpServletRequest req) {
     return ok(req, game().progress(access(req)));

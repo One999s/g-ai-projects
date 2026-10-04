@@ -99,4 +99,44 @@ class MysqlJdbcGameStoreIntegrationTest extends JdbcGameStoreTest {
     if (admin != null && database != null && database.matches("quiz_it_[a-f0-9]{32}"))
       admin.execute("DROP DATABASE " + database);
   }
+
+  @Test
+  void recordSnapshotDoesNotMixAConcurrentSettlementIntoHistory() throws Exception {
+    var pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+    var inserted = new java.util.concurrent.atomic.AtomicBoolean();
+    try {
+      var reader =
+          new JdbcTemplate(db.getDataSource()) {
+            @Override
+            public <T> java.util.List<T> query(
+                String sql, org.springframework.jdbc.core.RowMapper<T> mapper, Object... args) {
+              var result = super.query(sql, mapper, args);
+              if (sql.contains("FROM quiz_progress") && inserted.compareAndSet(false, true)) {
+                try {
+                  pool.submit(() -> finish()).get(4, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (Exception e) {
+                  throw new IllegalStateException(e);
+                }
+              }
+              return result;
+            }
+          };
+      var tx =
+          new org.springframework.transaction.support.TransactionTemplate(
+              new org.springframework.jdbc.datasource.DataSourceTransactionManager(
+                  db.getDataSource()));
+      var consistent =
+          new JdbcGameStore(reader, tx, new com.fasterxml.jackson.databind.ObjectMapper());
+      var old = consistent.record(owner, () -> {});
+      org.junit.jupiter.api.Assertions.assertTrue(inserted.get());
+      org.junit.jupiter.api.Assertions.assertEquals(0, old.progress().gamesPlayed());
+      org.junit.jupiter.api.Assertions.assertTrue(old.recent().isEmpty());
+      var next = consistent.record(owner, () -> {});
+      org.junit.jupiter.api.Assertions.assertEquals(1, next.progress().gamesPlayed());
+      org.junit.jupiter.api.Assertions.assertEquals(1, next.recent().size());
+      org.junit.jupiter.api.Assertions.assertEquals(750, next.progress().totalScore());
+    } finally {
+      pool.shutdownNow();
+    }
+  }
 }

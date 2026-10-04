@@ -417,4 +417,64 @@ class JdbcGameStoreTest {
     assertEquals("ABANDONED", store.transact(s.id, owner, x -> x.phase));
     assertEquals(0, store.progress(owner).gamesPlayed());
   }
+
+  @Test
+  void combinedRecordIsScopedAndTracksOnlyCompletedGames() {
+    var empty = store.record(owner, () -> {});
+    assertEquals(0, empty.progress().gamesPlayed());
+    assertTrue(empty.recent().isEmpty());
+    assertEquals(20, empty.limit());
+    finish();
+    var record = store.record(owner, () -> {});
+    assertEquals(750, record.progress().totalScore());
+    assertEquals(1, record.recent().size());
+    assertEquals(s.id, record.recent().get(0).sessionId());
+    for (var p :
+        List.of(
+            new Player(owner.siteId() + 1, owner.siteUserId()),
+            new Player(owner.siteId(), owner.siteUserId() + 1))) {
+      var other = store.record(p, () -> {});
+      assertEquals(0, other.progress().gamesPlayed());
+      assertTrue(other.recent().isEmpty());
+    }
+  }
+
+  @Test
+  void combinedRecordRevalidatesAndRejectsRevocationAfterReads() {
+    var calls = new java.util.concurrent.atomic.AtomicInteger();
+    var error =
+        assertThrows(
+            RuleException.class,
+            () ->
+                store.record(
+                    owner,
+                    () -> {
+                      if (calls.incrementAndGet() == 2)
+                        throw new RuleException("AUTHENTICATION_REQUIRED", 401);
+                    }));
+    assertEquals(401, error.status);
+    assertEquals(2, calls.get());
+    assertEquals(0, store.progress(owner).gamesPlayed());
+  }
+
+  @Test
+  void combinedRecordUsesDedicatedReadOnlyRepeatableTransaction() {
+    store.record(
+        owner,
+        () -> {
+          assertTrue(
+              org.springframework.transaction.support.TransactionSynchronizationManager
+                  .isActualTransactionActive());
+          assertTrue(
+              org.springframework.transaction.support.TransactionSynchronizationManager
+                  .isCurrentTransactionReadOnly());
+          assertEquals(
+              java.sql.Connection.TRANSACTION_REPEATABLE_READ,
+              org.springframework.transaction.support.TransactionSynchronizationManager
+                  .getCurrentTransactionIsolationLevel());
+        });
+    assertFalse(
+        org.springframework.transaction.support.TransactionSynchronizationManager
+            .isActualTransactionActive());
+  }
 }

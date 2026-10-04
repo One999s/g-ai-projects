@@ -126,6 +126,10 @@ public final class GameService {
         });
   }
 
+  public JdbcGameStore.RecordView record(VerifiedAccess a) {
+    return store.record(a.player(), a::assertCurrent);
+  }
+
   public JdbcGameStore.Progress progress(VerifiedAccess a) {
     a.assertCurrent();
     var result = store.progress(a.player());

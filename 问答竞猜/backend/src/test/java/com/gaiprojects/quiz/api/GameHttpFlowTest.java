@@ -677,4 +677,19 @@ class GameHttpFlowTest {
     clock.value.set(s.get("loadingDeadline").asLong());
     assertEquals(409, request(path, HttpMethod.GET, null, "owner").getStatusCode().value());
   }
+
+  @Test
+  void combinedRecordHttpIsEmptyBeforeFinishAndFailsOnIdentityLoss() throws Exception {
+    var value = data(request("/api/quiz/me/record", HttpMethod.GET, null, "owner"));
+    assertEquals(20, value.get("limit").asInt());
+    assertEquals(0, value.get("progress").get("gamesPlayed").asInt());
+    assertEquals(0, value.get("recent").size());
+    create("record-incomplete");
+    assertEquals(
+        0,
+        data(request("/api/quiz/me/record", HttpMethod.GET, null, "owner")).get("recent").size());
+    auth.expireDuringQuota = true;
+    assertEquals(
+        401, request("/api/quiz/me/record", HttpMethod.GET, null, "owner").getStatusCode().value());
+  }
 }

@@ -47,6 +47,7 @@ public final class IdentityAdmission extends OncePerRequestFilter {
     if (method.equals("GET"))
       return path.equals("/api/quiz/me/capabilities")
           || path.equals("/api/quiz/me/progress")
+          || path.equals("/api/quiz/me/record")
           || path.equals("/api/quiz/me/sessions")
           || path.matches("/api/quiz/sessions/" + ID + "/current")
           || path.matches("/api/quiz/sessions/" + ID + "/rounds/" + ID + "/narration(?:/audio)?");
