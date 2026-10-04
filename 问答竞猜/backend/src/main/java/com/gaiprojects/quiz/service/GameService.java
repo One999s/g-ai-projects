@@ -21,18 +21,35 @@ public final class GameService {
   }
 
   public GameRules.SessionView create(VerifiedAccess access, String locale, String key) {
+    return create(access, locale, key, null, null);
+  }
+
+  public ApprovedQuestionBank.Catalog catalog(VerifiedAccess access, String locale) {
+    access.assertCurrent();
+    var catalog = bank.catalog(locale, clock.millis());
+    access.assertCurrent();
+    return catalog;
+  }
+
+  public GameRules.SessionView create(
+      VerifiedAccess access, String locale, String key, String planId, String version) {
     if (locale == null) throw new RuleException("UNSUPPORTED_LOCALE", 400);
     var s =
         store.createAtomic(
             access.player(),
             locale,
             key,
+            planId,
+            version,
             access::assertCurrent,
             () -> {
-              var pack = bank.select(locale, clock.millis());
+              var pack = bank.select(locale, clock.millis(), planId, version);
               access.assertCurrent();
-              return rules.create(
-                  access.player(), locale, pack.version(), pack.questions(), clock.millis());
+              var session =
+                  rules.create(
+                      access.player(), locale, pack.version(), pack.questions(), clock.millis());
+              session.challenge = pack.challenge();
+              return session;
             });
     return current(access, s.id);
   }

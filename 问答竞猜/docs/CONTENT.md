@@ -8,7 +8,7 @@
 
 ApprovedQuestionBank只读quiz_question_packs/quiz_question_audit。在同一SQL语句中查找当前语言、有效时间内、approved状态、与审核人/内容hash/批准时间完全对应的审批事件。选取时刻是内容选择的时间边界；已被选中的不可变快照可继续使用，退役后新选择被阻止。B07已将选择与会话创建纳入同一外层事务；相同幂等键重放原快照，退役后不改写既有会话。
 
-数据库先排除超过256KiB的JSON，再复核精确UTF-8 SHA256。文本包schemaVersion=2（与会话信封版本独立），questions必须5–500条，ID唯一、语言一致、四个不同选项、唯一有效答案。每条需sources（HTTPS、无URL用户名密码）、rightsNote、reviewedBy及不晚于批准时间的reviewedAtMillis。原子审批身份仍由真实运营流程负责；这些字段检查不是事实/许可审核本身。
+数据库先排除超过256KiB的JSON，再复核精确UTF-8 SHA256。文本包schemaVersion=2用于自由挑战，B20另支持schemaVersion=3分类/审核路线（与会话信封版本独立，详见CHALLENGE-PLANS.md），questions必须5–500条，ID唯一、语言一致、四个不同选项、唯一有效答案。每条需sources（HTTPS、无URL用户名密码）、rightsNote、reviewedBy及不晚于批准时间的reviewedAtMillis。原子审批身份仍由真实运营流程负责；这些字段检查不是事实/许可审核本身。
 
 解码拒绝重复JSON键、未知字段、尾随内容及标量类型强制转换。没有演示题回退、自动生成、自动批准或审批写接口。成功只返回随机5题不可变文本快照及版本/hash；不是公开返回完整题库的API。
 

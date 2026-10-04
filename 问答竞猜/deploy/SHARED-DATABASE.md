@@ -14,6 +14,6 @@ shared-db显式连接由受控懒加载Hikari工厂提供，只消费SHARED_DATA
 
 独立迁移owner先核对真实DDL、现有history和表ownership，在同一个连接持有shared_apps_schema_migration锁，分别操作ai_hub_schema_history/quiz_schema_history，禁止混扫两套V001。只有目标应用命名空间确实为空、用户授权目标明确时才能在离线审核流程初始化；现有历史/旧表不自动收编。MySQL DDL非事务回滚，失败后先审阅，不自动drop或repair。运行账号不写history；当前history/checksum验证仍属离线流程，并未实现生产迁移CLI。
 
-当前B07及后续state_json是schemaVersion=3信封（含loadingDeadline），此前B05实验版本2不自动转换。旧无版本/不兼容会话一律503拒绝并保留原字节，不转换、不删除、不挪用旧成绩。V001物理schema未变；这不是对原生产数据兼容性的宣称。上线前应单独审计历史会话/题包版本及迁移策略。
+B20新写state_json为schemaVersion=4信封（含可空审核路线），兼容读取B07–B19版本3的自由会话；原有业务状态写入时保存版本4，不批量转换。B05实验版本2及旧无版本/不兼容会话一律503拒绝并保留原字节，不删除、不挪用旧成绩。V001物理schema未变；这不是对原生产数据兼容性的宣称。上线前应单独审计历史会话/题包版本及迁移策略。
 
 数据库权限见quiz-runtime-grants.sql.template。运行账号只访问quiz业务表，不读原身份、AI中台、团队或钱包表。部署说明只是模板，未实际创建生产账户或执行GRANT。

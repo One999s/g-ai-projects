@@ -45,7 +45,8 @@ public final class IdentityAdmission extends OncePerRequestFilter {
 
   private boolean known(String method, String path) {
     if (method.equals("GET"))
-      return path.equals("/api/quiz/me/capabilities")
+      return path.equals("/api/quiz/challenges")
+          || path.equals("/api/quiz/me/capabilities")
           || path.equals("/api/quiz/me/progress")
           || path.equals("/api/quiz/me/record")
           || path.equals("/api/quiz/me/sessions")

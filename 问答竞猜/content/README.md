@@ -41,3 +41,7 @@ python3 问答竞猜/tools/audio_candidates.py 问答竞猜/content/candidates/w
 ## B15中文单题pilot
 
 `audio-candidates/world-foundations-zh-pilot`只包含world-001的一条本地MeloTTS中文候选与真实运行收据，7.593秒、规范mono 16k PCM16 WAV；未试听/未批准，不能直接投入正式旁白。安装来源、固定许可声明、2线程/3GiB停止阈值和原生网络观测限制见[中文候选说明](../tts-candidates/README.md)。英文旧manifest的zh-CN缺失指它自己的音频包；中文完整20题仍未生成。
+
+
+## B20 双语审核路线
+world-foundations-r2.routes.json记录20题的assistant编辑题类/难度理由及2条五轮路线，共用原题文和文本审核hash。难度未经过玩家数据校准。tools/challenge_plans.py可只读校验或导出schema3文档；不连接DB、不批准部署/音频。建议新bankVersion，原英文/中文音频仍是未试听候选，不能直接绑定新路线版本。见docs/CHALLENGE-PLANS.md。

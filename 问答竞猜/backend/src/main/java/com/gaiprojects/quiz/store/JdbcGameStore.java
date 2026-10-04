@@ -39,7 +39,8 @@ public final class JdbcGameStore {
     try {
       var envelope = json.readValue(row.state, StateEnvelope.class);
       var s = envelope.state();
-      if (envelope.schemaVersion() != 3
+      if (!Set.of(3, 4).contains(envelope.schemaVersion())
+          || (envelope.schemaVersion() == 3 && s != null && s.challenge != null)
           || s == null
           || !row.id.equals(s.id)
           || s.player == null
@@ -151,7 +152,7 @@ public final class JdbcGameStore {
                 candidate.bankVersion,
                 "ACTIVE",
                 candidate.revision,
-                encode(new StateEnvelope(3, candidate)),
+                encode(new StateEnvelope(4, candidate)),
                 candidate.createdAt,
                 candidate.createdAt,
                 candidate.expiresAt,
@@ -167,7 +168,11 @@ public final class JdbcGameStore {
                     creationKey);
             if (existing.isEmpty()) throw conflict;
             var saved = decode(existing.get(0));
-            if (!saved.locale.equals(candidate.locale))
+            if (!saved.locale.equals(candidate.locale)
+                || !sameChoice(
+                    saved,
+                    candidate.challenge == null ? null : candidate.challenge.id(),
+                    candidate.challenge == null ? null : candidate.bankVersion))
               throw new RuleException("IDEMPOTENCY_CONFLICT", 409);
             return saved;
           }
@@ -219,7 +224,7 @@ public final class JdbcGameStore {
                             + " WHERE session_id=? AND site_id=? AND site_user_id=? AND revision=?",
                         rowStatus(s),
                         s.revision,
-                        encode(new StateEnvelope(3, s)),
+                        encode(new StateEnvelope(4, s)),
                         System.currentTimeMillis(),
                         due(s),
                         s.id,
@@ -245,6 +250,24 @@ public final class JdbcGameStore {
       String creationKey,
       Runnable authorization,
       java.util.function.Supplier<GameSession> factory) {
+    return createAtomic(player, locale, creationKey, null, null, authorization, factory);
+  }
+
+  private static boolean sameChoice(GameSession s, String planId, String version) {
+    return planId == null
+        ? s.challenge == null
+        : s.challenge != null && s.challenge.id().equals(planId) && s.bankVersion.equals(version);
+  }
+
+  public GameSession createAtomic(
+      Player player,
+      String locale,
+      String creationKey,
+      String planId,
+      String version,
+      Runnable authorization,
+      java.util.function.Supplier<GameSession> factory) {
+    ApprovedQuestionBank.validateChoice(planId, version);
     key(creationKey);
     if (player == null) throw new RuleException("AUTHENTICATION_REQUIRED", 401);
     if (!Set.of("en", "zh-CN").contains(locale)) throw new RuleException("UNSUPPORTED_LOCALE", 400);
@@ -261,10 +284,13 @@ public final class JdbcGameStore {
           GameSession result;
           if (!found.isEmpty()) {
             result = decode(found.get(0));
-            if (!result.locale.equals(locale)) throw new RuleException("IDEMPOTENCY_CONFLICT", 409);
+            if (!result.locale.equals(locale) || !sameChoice(result, planId, version))
+              throw new RuleException("IDEMPOTENCY_CONFLICT", 409);
           } else {
             var candidate = factory.get();
-            if (!player.equals(candidate.player) || !locale.equals(candidate.locale))
+            if (!player.equals(candidate.player)
+                || !locale.equals(candidate.locale)
+                || !sameChoice(candidate, planId, version))
               throw new IllegalStateException("QUIZ_SCOPE_MUTATION_REJECTED");
             result = create(candidate, creationKey);
           }

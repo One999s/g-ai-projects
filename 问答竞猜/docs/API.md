@@ -27,3 +27,7 @@ B07会话存储信封升级到schemaVersion3以固定loadingDeadline。B05/B06�
 ## B12 optional speech candidate
 
 GET `/api/quiz/me/capabilities` reports whether the candidate processor is configured, not whether production speech is accepted. POST `/sessions/{id}/rounds/{round}/voice-candidate` under `/api/quiz` accepts only canonical mono16kHz PCM16 WAV (44-byte header,0.1–6sec,max192044bytes). It is not a JSON route. Authentication/quota/scope/phase precede audio parsing; request and response remain bounded. No correct answer or score is returned. `requiresConfirmation=true` always requires a separate ordinary answer call; see SPEECH-CANDIDATES.md. Feature is disabled unless explicitly configured.
+
+
+## B20 审核路线
+新增身份保护GET `/api/quiz/challenges?locale=en|zh-CN`，返回version、locale、plans（仅题类/难度/标题）。POST开局可选同时提供challengeId、challengeVersion，省略二者保持自由挑战；版本变化/路线缺失409，参数不完整400，同幂等键变更选择409。快照新增可空challenge、challengeVersion，不含后续题目或答案。详情见CHALLENGE-PLANS.md。

@@ -196,7 +196,9 @@ public final class GameRules {
         hidden ? null : q.text(),
         hidden ? List.of() : q.options(),
         hidden ? Set.of() : Set.copyOf(s.eliminated),
-        hidden ? null : result);
+        hidden ? null : result,
+        s.challenge,
+        s.challenge == null ? null : s.bankVersion);
   }
 
   /**
@@ -220,5 +222,7 @@ public final class GameRules {
       String question,
       List<String> options,
       Set<Integer> eliminated,
-      GameSession.Result reveal) {}
+      GameSession.Result reveal,
+      ChallengePlan challenge,
+      String challengeVersion) {}
 }

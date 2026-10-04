@@ -188,9 +188,25 @@ class GameHttpFlowTest {
                 List.of("https://science.nasa.gov/"),
                 "Synthetic test only; not commercial approval",
                 "TEST_ONLY",
-                NOW - 3000));
+                NOW - 3000,
+                "space",
+                1 + i / 2));
       String raw =
-          new ObjectMapper().writeValueAsString(new ApprovedQuestionBank.PackDocument(2, list));
+          new ObjectMapper()
+              .writeValueAsString(
+                  new ApprovedQuestionBank.PackDocument(
+                      3,
+                      list,
+                      List.of(
+                          new ChallengePlan(
+                              "rising",
+                              "TEST ONLY ROUTE",
+                              List.of(
+                                  new ChallengePlan.Slot("space", 1),
+                                  new ChallengePlan.Slot("space", 1),
+                                  new ChallengePlan.Slot("space", 2),
+                                  new ChallengePlan.Slot("space", 2),
+                                  new ChallengePlan.Slot("space", 3))))));
       String hash =
           HexFormat.of()
               .formatHex(
@@ -725,5 +741,79 @@ class GameHttpFlowTest {
     assertTrue(abandoned.get("question").isNull());
     assertEquals(0, abandoned.get("options").size());
     assertTrue(abandoned.get("reveal").isNull());
+  }
+
+  @Test
+  void challengeCatalogAndCreationBindVersionWithoutDisclosingQuestions() throws Exception {
+    var catalog = data(request("/api/quiz/challenges?locale=en", HttpMethod.GET, null, "owner"));
+    assertEquals(1, catalog.get("plans").size());
+    assertFalse(catalog.toString().contains("http-test-"));
+    assertFalse(catalog.toString().contains("SYNTHETIC TEST QUESTION"));
+    var body =
+        json.writeValueAsString(
+            Map.of(
+                "locale",
+                "en",
+                "idempotencyKey",
+                "route-test-key",
+                "challengeId",
+                "rising",
+                "challengeVersion",
+                catalog.get("version").asText()));
+    var s = data(request("/api/quiz/sessions", HttpMethod.POST, body, "owner"));
+    assertEquals("rising", s.get("challenge").get("id").asText());
+    assertTrue(s.get("question").isNull());
+    assertEquals(
+        s.get("sessionId"),
+        data(request("/api/quiz/sessions", HttpMethod.POST, body, "owner")).get("sessionId"));
+    assertEquals(
+        409,
+        request(
+                "/api/quiz/sessions",
+                HttpMethod.POST,
+                json.writeValueAsString(Map.of("locale", "en", "idempotencyKey", "route-test-key")),
+                "owner")
+            .getStatusCode()
+            .value());
+    assertEquals(
+        409,
+        request(
+                "/api/quiz/sessions",
+                HttpMethod.POST,
+                body.replace("HTTP_TEST_ONLY", "OLD_VERSION"),
+                "owner")
+            .getStatusCode()
+            .value());
+    for (int i = 0; i < 5; i++) {
+      s = data(request(roundPath(s) + "/ready", HttpMethod.POST, null, "owner"));
+      clock.value.set(s.get("opensAt").asLong());
+      s =
+          data(request(
+                  roundPath(s) + "/answer",
+                  HttpMethod.POST,
+                  json.writeValueAsString(
+                      Map.of("choice", 2, "idempotencyKey", "route-answer-" + i)),
+                  "owner"))
+              .get("session");
+      assertEquals("rising", s.get("challenge").get("id").asText());
+      s = data(request(roundPath(s) + "/next", HttpMethod.POST, null, "owner"));
+    }
+    assertEquals("FINISHED", s.get("phase").asText());
+    assertEquals(750, s.get("score").asInt());
+  }
+
+  @Test
+  void challengeCatalogFailsClosedWhenAccessExpiresOrLocaleIsInvalid() throws Exception {
+    assertEquals(
+        400,
+        request("/api/quiz/challenges?locale=xx", HttpMethod.GET, null, "owner")
+            .getStatusCode()
+            .value());
+    auth.expireDuringQuota = true;
+    assertEquals(
+        401,
+        request("/api/quiz/challenges?locale=en", HttpMethod.GET, null, "owner")
+            .getStatusCode()
+            .value());
   }
 }

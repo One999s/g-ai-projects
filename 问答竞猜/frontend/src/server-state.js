@@ -1,3 +1,4 @@
+import {validatePlan} from './challenges.js'
 import {QuizApiError} from './server-api.js'
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export function validateSnapshot(s){
@@ -12,7 +13,8 @@ export function validateSnapshot(s){
  if(s.reveal!==null){const r=s.reveal;if(!r||r.roundId!==s.roundId||!Number.isInteger(r.correct)||r.correct<0||r.correct>3||(r.selected!==null&&(!Number.isInteger(r.selected)||r.selected<0||r.selected>3))||typeof r.explanation!=='string'||!Number.isInteger(r.awarded)||r.awarded<0||r.awarded>200)bad()}
  if(['LOADING','READING','ANSWERING'].includes(s.phase)&&s.reveal!==null)bad()
  if(['REVEALING','FINISHED'].includes(s.phase)&&s.reveal===null)bad()
- return Object.freeze({...s,options:Object.freeze([...s.options]),eliminated:Object.freeze([...s.eliminated]),reveal:s.reveal?Object.freeze({...s.reveal}):null})
+ if(s.challenge!=null){try{validatePlan(s.challenge)}catch{bad()}if(typeof s.challengeVersion!=='string'||!s.challengeVersion.trim()||s.challengeVersion.length>100)bad()}else if(s.challengeVersion!=null)bad()
+ return Object.freeze({...s,challenge:s.challenge?validatePlan(s.challenge):null,options:Object.freeze([...s.options]),eliminated:Object.freeze([...s.eliminated]),reveal:s.reveal?Object.freeze({...s.reveal}):null})
 }
 export function isNewer(current,next){if(!current)return true;if(current.sessionId!==next.sessionId)return false;return next.revision>current.revision||(next.revision===current.revision&&next.serverNow>=current.serverNow)}
 export function commandResolved(command,s){if(!command||command.sessionId!==s.sessionId)return false;if(['ABANDONED','FINISHED'].includes(s.phase))return true;if(command.roundId&&command.roundId!==s.roundId)return true;if(command.kind==='answer')return s.phase==='REVEALING';if(command.kind==='ready')return s.phase!=='LOADING';if(command.kind==='fifty')return s.lifelineUsed;return false}

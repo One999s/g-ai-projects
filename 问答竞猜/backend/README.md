@@ -28,7 +28,7 @@ ApprovedQuestionBank joins eligibility and matching approval evidence in one SQL
 
 Session APIs, atomic start/replay, transaction authorization rechecks and the source JavaScript transport are implemented; see docs/API.md. Original identity and enabled distributed quota are mandatory; identity remains absent and Redis remains disabled by default, so production traffic remains fail-closed. Node20+ is additionally required by the actual source-client HTTP integration test; CI pins Node24.
 
-Session storage is now schemaVersion3 (bounded loadingDeadline), replacing the experimental version2 reader without automatic conversion. Existing incompatible bytes are preserved and rejected. This is a data compatibility gate, not a live migration.
+B20 writes state schemaVersion4 with optional reviewed challenge metadata and reads schemaVersion3 free sessions. Existing incompatible/experimental version2 bytes are preserved and rejected. There is no bulk conversion or DDL change. A normal state mutation writes version4; coordinate application rollout because B19 cannot read it. See docs/CHALLENGE-PLANS.md.
 
 ## B09 distributed Redis admission
 

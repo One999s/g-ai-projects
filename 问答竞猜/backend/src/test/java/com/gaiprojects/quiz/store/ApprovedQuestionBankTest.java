@@ -263,4 +263,136 @@ class ApprovedQuestionBankTest {
         "QUESTION_BANK_INVALID",
         assertThrows(RuleException.class, () -> bank.select("en", NOW)).code);
   }
+
+  void planned() throws Exception {
+    var json = new ObjectMapper();
+    var old = json.readValue(raw, ApprovedQuestionBank.PackDocument.class);
+    var tagged = new ArrayList<ApprovedQuestionBank.ReviewedQuestion>();
+    for (int i = 0; i < old.questions().size(); i++) {
+      var q = old.questions().get(i);
+      tagged.add(
+          new ApprovedQuestionBank.ReviewedQuestion(
+              q.question(),
+              q.sources(),
+              q.rightsNote(),
+              q.reviewedBy(),
+              q.reviewedAtMillis(),
+              "space",
+              i < 3 ? 1 : i < 6 ? 2 : 3));
+    }
+    var slots =
+        List.of(
+            new ChallengePlan.Slot("space", 1),
+            new ChallengePlan.Slot("space", 1),
+            new ChallengePlan.Slot("space", 2),
+            new ChallengePlan.Slot("space", 2),
+            new ChallengePlan.Slot("space", 3));
+    raw =
+        json.writeValueAsString(
+            new ApprovedQuestionBank.PackDocument(
+                3,
+                tagged,
+                List.of(new ChallengePlan("rising", "Editorial rising challenge", slots))));
+    hash = sha(raw);
+  }
+
+  @Test
+  void plannedSelectionRespectsEverySlotWithoutRepeats() throws Exception {
+    planned();
+    seed(true);
+    for (int attempt = 0; attempt < 20; attempt++) {
+      var selection = bank.select("en", NOW, "rising", "TEST_ONLY");
+      assertEquals(5, selection.questions().stream().map(Question::id).distinct().count());
+      for (int i = 0; i < 5; i++) {
+        int id = Integer.parseInt(selection.questions().get(i).id().substring(8));
+        assertEquals(
+            selection.challenge().slots().get(i).difficulty(), id < 3 ? 1 : id < 6 ? 2 : 3);
+      }
+    }
+    var catalog = bank.catalog("en", NOW);
+    assertEquals("TEST_ONLY", catalog.version());
+    assertEquals(1, catalog.plans().size());
+    assertFalse(new ObjectMapper().writeValueAsString(catalog).contains("fixture-"));
+    assertNull(bank.select("en", NOW).challenge());
+  }
+
+  @Test
+  void schemaTwoStillOffersFreeChallengeOnly() throws Exception {
+    seed(true);
+    assertTrue(bank.catalog("en", NOW).plans().isEmpty());
+    assertEquals(
+        "CHALLENGE_UNAVAILABLE",
+        assertThrows(RuleException.class, () -> bank.select("en", NOW, "rising", "TEST_ONLY"))
+            .code);
+  }
+
+  @Test
+  void staleCatalogAndUnknownPlanNeverFallBackToRandom() throws Exception {
+    planned();
+    seed(true);
+    assertEquals(
+        "CHALLENGE_CATALOG_CHANGED",
+        assertThrows(RuleException.class, () -> bank.select("en", NOW, "rising", "OLD")).code);
+    assertEquals(
+        "CHALLENGE_UNAVAILABLE",
+        assertThrows(RuleException.class, () -> bank.select("en", NOW, "missing", "TEST_ONLY"))
+            .code);
+  }
+
+  @Test
+  void insufficientPlanCoverageRejectsTheEntirePackIncludingFreeMode() throws Exception {
+    planned();
+    raw =
+        raw.replace(
+            "\"category\":\"space\",\"difficulty\":3",
+            "\"category\":\"ocean\",\"difficulty\":3"); // Replace question and slot together, then
+                                                        // require more hard questions than exist.
+    var json = new ObjectMapper();
+    var doc = json.readValue(raw, ApprovedQuestionBank.PackDocument.class);
+    var slots = Collections.nCopies(5, new ChallengePlan.Slot("space", 3));
+    raw =
+        json.writeValueAsString(
+            new ApprovedQuestionBank.PackDocument(
+                3, doc.questions(), List.of(new ChallengePlan("hard", "Hard", slots))));
+    hash = sha(raw);
+    seed(true);
+    assertThrows(RuleException.class, () -> bank.catalog("en", NOW));
+    assertThrows(RuleException.class, () -> bank.select("en", NOW));
+  }
+
+  @Test
+  void missingClassificationFailsClosed() throws Exception {
+    planned();
+    raw = raw.replaceFirst("\"category\":\"space\"", "\"category\":null");
+    hash = sha(raw);
+    seed(true);
+    assertThrows(RuleException.class, () -> bank.select("en", NOW));
+  }
+
+  @Test
+  void planMustHaveFiveNondecreasingValidSlots() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new ChallengePlan("bad", "Bad", List.of(new ChallengePlan.Slot("space", 1))));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new ChallengePlan(
+                "bad",
+                "Bad",
+                List.of(
+                    new ChallengePlan.Slot("space", 2),
+                    new ChallengePlan.Slot("space", 1),
+                    new ChallengePlan.Slot("space", 2),
+                    new ChallengePlan.Slot("space", 2),
+                    new ChallengePlan.Slot("space", 3))));
+    assertThrows(IllegalArgumentException.class, () -> new ChallengePlan.Slot("../secret", 1));
+  }
+
+  @Test
+  void partialOrReservedSelectionIsRejectedBeforeDatabaseAccess() {
+    assertThrows(RuleException.class, () -> bank.select("en", NOW, "rising", null));
+    assertThrows(RuleException.class, () -> bank.select("en", NOW, null, "version"));
+    assertThrows(RuleException.class, () -> bank.select("en", NOW, "free", "version"));
+  }
 }

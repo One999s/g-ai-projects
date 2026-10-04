@@ -8,6 +8,7 @@ public final class GameSession {
   public Player player;
   public String locale;
   public String bankVersion;
+  public ChallengePlan challenge;
   public List<Question> questions;
   public List<String> roundIds;
   public int index, score, streak, bestStreak;

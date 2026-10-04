@@ -34,13 +34,27 @@ public final class GameController {
     return ApiEnvelope.ok((String) req.getAttribute(IdentityAdmission.REQUEST_ID), data);
   }
 
-  public record CreateRequest(String locale, String idempotencyKey) {}
+  public record CreateRequest(
+      String locale, String idempotencyKey, String challengeId, String challengeVersion) {}
 
   public record AnswerRequest(Integer choice, String idempotencyKey) {}
 
   @PostMapping("/sessions")
   public ApiEnvelope create(@RequestBody CreateRequest body, HttpServletRequest req) {
-    return ok(req, game().create(access(req), body.locale(), body.idempotencyKey()));
+    return ok(
+        req,
+        game()
+            .create(
+                access(req),
+                body.locale(),
+                body.idempotencyKey(),
+                body.challengeId(),
+                body.challengeVersion()));
+  }
+
+  @GetMapping("/challenges")
+  public ApiEnvelope challenges(@RequestParam String locale, HttpServletRequest req) {
+    return ok(req, game().catalog(access(req), locale));
   }
 
   @GetMapping("/sessions/{id}/current")

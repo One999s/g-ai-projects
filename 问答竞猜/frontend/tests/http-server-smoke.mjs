@@ -4,15 +4,17 @@ import {randomUUID,webcrypto} from 'node:crypto'
 import {createNarrationPlayer} from '../src/narration.js'
 import {createQuizApi} from '../src/server-api.js'
 import {validateSnapshot,validateVoiceCandidate} from '../src/server-state.js'
+import {validateCatalog} from '../src/challenges.js'
 import {validateRecord} from '../src/server-record.js'
 import {encodeWave} from '../src/voice-recorder.js'
 const origin=process.argv[2]
 assert.match(origin,/^http:\/\/127\.0\.0\.1:\d+$/)
 const api=createQuizApi({base:origin+'/api/quiz',fetcher:(url,options)=>fetch(url,{...options,headers:{...options.headers,'X-Test-Actor':'owner'}})})
 assert.equal(validateRecord(await api.record()).progress.gamesPlayed,0)
-const creation='create-'+randomUUID();let s=validateSnapshot(await api.create('en',creation))
+const catalog=validateCatalog(await api.challenges('en'),'en');assert.equal(catalog.plans.length,1);const challenge={id:catalog.plans[0].id,version:catalog.version}
+const creation='create-'+randomUUID();let s=validateSnapshot(await api.create('en',creation,challenge));assert.equal(s.challenge.id,challenge.id)
 assert.equal(s.phase,'LOADING');assert.equal(s.reveal,null);assert.equal(s.options.length,0);assert.equal(s.question,null);assert.equal('answer'in s,false)
-assert.equal((await api.create('en',creation)).sessionId,s.sessionId)
+assert.equal((await api.create('en',creation,challenge)).sessionId,s.sessionId)
 for(let i=0;i<5;i++){
  const narrator=createNarrationPlayer({Context:class{constructor(){this.currentTime=0;this.destination={}}async resume(){}async close(){}async decodeAudioData(){return{duration:1,numberOfChannels:1}}createBufferSource(){return{connect(){},start(){},stop(){}}}},digest:b=>webcrypto.subtle.digest('SHA-256',b),fetcher:(path,options)=>fetch(origin+path,{...options,headers:{'X-Test-Actor':'owner'}})})
  assert.equal(narrator.arm(s),true) // Device preparation only; no question/audio request before Ready.

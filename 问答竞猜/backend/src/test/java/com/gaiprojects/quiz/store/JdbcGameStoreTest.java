@@ -477,4 +477,104 @@ class JdbcGameStoreTest {
         org.springframework.transaction.support.TransactionSynchronizationManager
             .isActualTransactionActive());
   }
+
+  @Test
+  void challengeSelectionIsPartOfCreationIdempotencyAndSurvivesReload() {
+    var plan =
+        new ChallengePlan(
+            "rising", "Test route", Collections.nCopies(5, new ChallengePlan.Slot("space", 1)));
+    var made =
+        store.createAtomic(
+            owner,
+            "en",
+            "plan-key-1",
+            "rising",
+            "TEST_ONLY",
+            () -> {},
+            () -> {
+              var g = newSession(owner);
+              g.challenge = plan;
+              return g;
+            });
+    var replay =
+        store.createAtomic(
+            owner,
+            "en",
+            "plan-key-1",
+            "rising",
+            "TEST_ONLY",
+            () -> {},
+            () -> {
+              throw new AssertionError("Replay must not reload the bank");
+            });
+    assertEquals(made.id, replay.id);
+    assertEquals(plan, replay.challenge);
+    assertEquals(
+        "IDEMPOTENCY_CONFLICT",
+        assertThrows(
+                RuleException.class,
+                () ->
+                    store.createAtomic(
+                        owner, "en", "plan-key-1", () -> {}, () -> newSession(owner)))
+            .code);
+    assertEquals(
+        "IDEMPOTENCY_CONFLICT",
+        assertThrows(
+                RuleException.class,
+                () ->
+                    store.createAtomic(
+                        owner,
+                        "en",
+                        "plan-key-1",
+                        "rising",
+                        "OTHER",
+                        () -> {},
+                        () -> newSession(owner)))
+            .code);
+    assertEquals(
+        "IDEMPOTENCY_CONFLICT",
+        assertThrows(
+                RuleException.class,
+                () ->
+                    store.createAtomic(
+                        owner,
+                        "en",
+                        "creation-key",
+                        "rising",
+                        "TEST_ONLY",
+                        () -> {},
+                        () -> newSession(owner)))
+            .code);
+  }
+
+  @Test
+  void oldStateThreeFreeSessionRemainsReadableButCannotClaimAPlan() throws Exception {
+    String raw =
+        db.queryForObject(
+            "SELECT state_json FROM quiz_sessions WHERE session_id=?", String.class, s.id);
+    var json = new ObjectMapper();
+    var tree = json.readTree(raw);
+    ((com.fasterxml.jackson.databind.node.ObjectNode) tree).put("schemaVersion", 3);
+    ((com.fasterxml.jackson.databind.node.ObjectNode) tree.get("state")).remove("challenge");
+    db.update(
+        "UPDATE quiz_sessions SET state_json=? WHERE session_id=?",
+        json.writeValueAsString(tree),
+        s.id);
+    assertEquals(s.id, store.transact(s.id, owner, g -> g.id));
+    ((com.fasterxml.jackson.databind.node.ObjectNode) tree.get("state"))
+        .set(
+            "challenge",
+            json.valueToTree(
+                new ChallengePlan(
+                    "rising",
+                    "Test route",
+                    Collections.nCopies(5, new ChallengePlan.Slot("space", 1)))));
+    String forged = json.writeValueAsString(tree);
+    db.update("UPDATE quiz_sessions SET state_json=? WHERE session_id=?", forged, s.id);
+    assertThrows(RuleException.class, () -> store.transact(s.id, owner, g -> g.id));
+    assertEquals(
+        forged,
+        db.queryForObject(
+            "SELECT state_json FROM quiz_sessions WHERE session_id=?", String.class, s.id));
+  }
 }

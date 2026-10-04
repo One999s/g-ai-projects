@@ -38,21 +38,42 @@ public final class ApprovedQuestionBank {
       List<String> sources,
       String rightsNote,
       String reviewedBy,
-      long reviewedAtMillis) {}
+      long reviewedAtMillis,
+      String category,
+      Integer difficulty) {
+    public ReviewedQuestion(
+        Question question,
+        List<String> sources,
+        String rightsNote,
+        String reviewedBy,
+        long reviewedAtMillis) {
+      this(question, sources, rightsNote, reviewedBy, reviewedAtMillis, null, null);
+    }
+  }
 
-  public record PackDocument(int schemaVersion, List<ReviewedQuestion> questions) {}
+  public record PackDocument(
+      int schemaVersion, List<ReviewedQuestion> questions, List<ChallengePlan> plans) {
+    public PackDocument(int schemaVersion, List<ReviewedQuestion> questions) {
+      this(schemaVersion, questions, null);
+    }
+  }
+
+  public record Catalog(String version, String locale, List<ChallengePlan> plans) {}
+
+  private record Loaded(Row row, PackDocument pack) {}
 
   public record Selection(
       String version,
       String locale,
       String contentSha256,
       long selectedAt,
-      List<Question> questions) {}
+      List<Question> questions,
+      ChallengePlan challenge) {}
 
   private record Row(
       String version, String locale, String raw, String hash, long approvedAt, String reviewer) {}
 
-  public Selection select(String locale, long now) {
+  private Loaded load(String locale, long now) {
     if (locale == null || !Set.of("en", "zh-CN").contains(locale))
       throw new RuleException("UNSUPPORTED_LOCALE", 400);
     // One statement observes the pack and its matching approval together. Oversized LOBs are not
@@ -94,7 +115,7 @@ public final class ApprovedQuestionBank {
               MessageDigest.getInstance("SHA-256").digest(bytes),
               HexFormat.of().parseHex(row.hash))) throw new IllegalArgumentException();
       PackDocument pack = json.readValue(bytes, PackDocument.class);
-      if (pack.schemaVersion() != 2
+      if (!Set.of(2, 3).contains(pack.schemaVersion())
           || pack.questions() == null
           || pack.questions().size() < 5
           || pack.questions().size() > 500) throw new IllegalArgumentException();
@@ -128,14 +149,88 @@ public final class ApprovedQuestionBank {
               || uri.getHost() == null
               || uri.getUserInfo() != null) throw new IllegalArgumentException();
         }
+        if (pack.schemaVersion() == 3)
+          new ChallengePlan.Slot(
+              item.category(), item.difficulty() == null ? 0 : item.difficulty());
+        else if (item.category() != null || item.difficulty() != null)
+          throw new IllegalArgumentException();
         selected.add(q);
       }
-      Collections.shuffle(selected, random);
-      return new Selection(
-          row.version, row.locale, row.hash, now, List.copyOf(selected.subList(0, 5)));
+      if (pack.schemaVersion() == 2) {
+        if (pack.plans() != null) throw new IllegalArgumentException();
+      } else {
+        if (pack.plans() == null || pack.plans().isEmpty() || pack.plans().size() > 12)
+          throw new IllegalArgumentException();
+        var planIds = new HashSet<String>();
+        for (var plan : pack.plans()) {
+          if (plan == null || !planIds.add(plan.id())) throw new IllegalArgumentException();
+          choose(pack, plan); // Every advertised plan must have five distinct matching questions.
+        }
+      }
+      return new Loaded(row, pack);
     } catch (Exception invalid) {
       throw new RuleException("QUESTION_BANK_INVALID", 503);
     }
+  }
+
+  public Catalog catalog(String locale, long now) {
+    var loaded = load(locale, now);
+    return new Catalog(
+        loaded.row.version,
+        locale,
+        loaded.pack.plans() == null ? List.of() : List.copyOf(loaded.pack.plans()));
+  }
+
+  public Selection select(String locale, long now) {
+    return select(locale, now, null, null);
+  }
+
+  public Selection select(String locale, long now, String planId, String expectedVersion) {
+    validateChoice(planId, expectedVersion);
+    var loaded = load(locale, now);
+    ChallengePlan plan = null;
+    if (planId != null) {
+      if (!loaded.row.version.equals(expectedVersion))
+        throw new RuleException("CHALLENGE_CATALOG_CHANGED", 409);
+      plan =
+          (loaded.pack.plans() == null ? List.<ChallengePlan>of() : loaded.pack.plans())
+              .stream()
+                  .filter(p -> p.id().equals(planId))
+                  .findFirst()
+                  .orElseThrow(() -> new RuleException("CHALLENGE_UNAVAILABLE", 409));
+    }
+    return new Selection(
+        loaded.row.version, locale, loaded.row.hash, now, choose(loaded.pack, plan), plan);
+  }
+
+  public static void validateChoice(String id, String version) {
+    if (id == null && version == null) return;
+    if (id == null
+        || !id.matches("[a-z][a-z0-9-]{0,39}")
+        || id.equals("free")
+        || version == null
+        || version.isBlank()
+        || version.length() > 100) throw new RuleException("INVALID_CHALLENGE_SELECTION", 400);
+  }
+
+  private List<Question> choose(PackDocument pack, ChallengePlan plan) {
+    var pool = new ArrayList<>(pack.questions());
+    Collections.shuffle(pool, random);
+    if (plan == null) return pool.subList(0, 5).stream().map(ReviewedQuestion::question).toList();
+    var result = new ArrayList<Question>();
+    for (var slot : plan.slots()) {
+      var match =
+          pool.stream()
+              .filter(
+                  q ->
+                      slot.category().equals(q.category())
+                          && Integer.valueOf(slot.difficulty()).equals(q.difficulty()))
+              .findFirst()
+              .orElseThrow(() -> new IllegalArgumentException("Insufficient plan coverage"));
+      result.add(match.question());
+      pool.remove(match);
+    }
+    return List.copyOf(result);
   }
 
   private static boolean blank(String text, int max) {
