@@ -17,6 +17,7 @@ MAX_RSS = 3 * 1024**3
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--checks', choices=['all', 'chinese-confirmation'], default='all')
     parser.add_argument('--python', type=Path, required=True)
     parser.add_argument('--model-dir', type=Path, required=True)
     parser.add_argument('--model-profile', choices=['tiny', 'small-2ec96c54'], required=True)
@@ -78,6 +79,9 @@ def main():
             ('chinese-http', 'RealSpeechHttpIntegrationTest', {'QUIZ_REAL_ASR_INTEGRATION':'true', 'QUIZ_REAL_ASR_LOCALE':'zh-CN', 'QUIZ_REAL_ASR_RECEIPT':str(args.output/'zh')}),
             ('english-http', 'RealSpeechHttpIntegrationTest', {'QUIZ_REAL_ASR_INTEGRATION':'true', 'QUIZ_REAL_ASR_LOCALE':'en', 'QUIZ_REAL_ASR_WAV':str(args.english_wav), 'QUIZ_REAL_ASR_RECEIPT':str(args.output/'en')}),
             ('queue', 'RealSpeechQueueIntegrationTest', {'QUIZ_REAL_ASR_QUEUE':'true', 'QUIZ_REAL_ASR_QUEUE_RECEIPT':str(args.output/'queue.json')})]
+        if args.checks == 'chinese-confirmation':
+            name, _, variables = cases[0]
+            cases = [(name, 'RealSpeechHttpIntegrationTest,SpeechRulesTest,GameHttpFlowTest', variables)]
         for name, test, variables in cases:
             if worker.poll() is not None: raise RuntimeError('Worker exited during evaluation')
             case_env = env.copy()
@@ -96,7 +100,7 @@ def main():
         try: worker.wait(timeout=3)
         except subprocess.TimeoutExpired: worker.kill(); worker.wait(timeout=3)
         stopped.set(); watcher.join(1); log.close()
-        evidence = {'modelProfile':args.model_profile, 'workerPeakRssBytesSampled':peak, 'rssSampleMillis':40,
+        evidence = {'modelProfile':args.model_profile, 'checks':args.checks, 'workerPeakRssBytesSampled':peak, 'rssSampleMillis':40,
                     'rssLimitBytes':MAX_RSS, 'stopReason':stop_reason, 'workerExited':worker.poll() is not None,
                     'elapsedSeconds':round(time.monotonic()-started,3), 'results':run_results,
                     'nativeNetworkObservationComplete':False, 'commercialConcurrencyAcceptance':False,

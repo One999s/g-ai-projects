@@ -569,6 +569,16 @@ class GameHttpFlowTest {
 
   @Test
   void speechCandidateNeedsSeparateAuthoritativeConfirmation() throws Exception {
+    assertSpeechCandidateNeedsSeparateAuthoritativeConfirmation();
+  }
+
+  @Test
+  void exactTraditionalCandidateStillNeedsSeparateAuthoritativeConfirmation() throws Exception {
+    speech.text = "我選擇第三項";
+    assertSpeechCandidateNeedsSeparateAuthoritativeConfirmation();
+  }
+
+  void assertSpeechCandidateNeedsSeparateAuthoritativeConfirmation() throws Exception {
     var s = answering();
     var candidate = data(voice(s, wave(), "owner"));
     assertEquals(2, candidate.get("choice").asInt());
@@ -636,8 +646,10 @@ class GameHttpFlowTest {
   @Test
   void ambiguousAndEliminatedSpeechNeverChangesScore() throws Exception {
     var s = answering();
-    speech.text = "A or B";
-    assertTrue(data(voice(s, wave(), "owner")).get("choice").isNull());
+    for (String text : List.of("A or B", "我選擇第三項？", "無選擇第三項", "我選擇第三項或第四項", "答案13")) {
+      speech.text = text;
+      assertTrue(data(voice(s, wave(), "owner")).get("choice").isNull());
+    }
     var fifty = data(request(roundPath(s) + "/fifty-fifty", HttpMethod.POST, null, "owner"));
     speech.text =
         "ABCD"

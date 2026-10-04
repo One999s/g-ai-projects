@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-04",
+  "baseCommit": "19ebbff598fcde3dba2c32d08217d5db0bcadd22",
+  "scope": "This source snapshot only; historical B22/B23 failures remain unchanged.",
+  "chineseCandidateCount": 1,
+  "fixedChineseSampleCount": 2,
+  "chineseRecognitionComplete": false,
+  "positiveCandidateAndConfirmationTestsPassed": 1,
+  "knownMistranscriptionSafetyTestsPassed": 1,
+  "ruleTestsPassed": 9,
+  "actualHttpTestsPassed": 22,
+  "focusedTestsTotal": 33,
+  "focusedTestsFailed": 0,
+  "focusedTestsSkipped": 0,
+  "defaultModelChanged": false,
+  "newModelDownloaded": false,
+  "realUserAudio": false,
+  "testOnlyIdentityQuestionBankQuotaAndClock": true,
+  "nativeNetworkObservationComplete": false,
+  "process": {
+    "modelProfile": "small-2ec96c54",
+    "checks": "chinese-confirmation",
+    "workerPeakRssBytesSampled": 617103360,
+    "rssSampleMillis": 40,
+    "rssLimitBytes": 3221225472,
+    "stopReason": null,
+    "workerExited": true,
+    "elapsedSeconds": 40.945,
+    "results": [
+      {
+        "case": "chinese-http",
+        "exitCode": 0
+      }
+    ],
+    "nativeNetworkObservationComplete": false,
+    "commercialConcurrencyAcceptance": false,
+    "testOnlyIdentityQuestionBankQuotaAndClock": true,
+    "workerSha256": "0bb714c936b905af30af07a0e8e22100082663499778adcfdd3f965562b4683c"
+  },
+  "results": [
+    {
+      "locale": "zh-CN",
+      "modelProfile": "small-2ec96c54",
+      "recognitionHttpMillis": 2307,
+      "testClock": true,
+      "fixtureId": "third-option",
+      "automaticCandidateRecognized": true,
+      "accurateCandidateExpected": true,
+      "manualChoiceRequired": false,
+      "transcript": "我選擇第三項",
+      "candidateChoice": 2,
+      "requiresConfirmation": true,
+      "beforeExplicitConfirmationScore": 0,
+      "afterExplicitConfirmationScore": 100,
+      "candidateChangedRevision": false,
+      "testOnlyIdentityAndQuestionBank": true,
+      "realUserAudio": false
+    },
+    {
+      "locale": "zh-CN",
+      "modelProfile": "small-2ec96c54",
+      "recognitionHttpMillis": 1950,
+      "testClock": true,
+      "fixtureId": "answer-three",
+      "automaticCandidateRecognized": false,
+      "accurateCandidateExpected": false,
+      "manualChoiceRequired": true,
+      "transcript": "答案13",
+      "candidateChoice": null,
+      "requiresConfirmation": true,
+      "beforeExplicitConfirmationScore": 0,
+      "afterExplicitConfirmationScore": 100,
+      "candidateChangedRevision": false,
+      "testOnlyIdentityAndQuestionBank": true,
+      "realUserAudio": false
+    }
+  ],
+  "sourceSha256": {
+    "backend/src/main/java/com/gaiprojects/quiz/speech/ChoiceMatcher.java": "ee09d31eaa11068cf6c5552da37a46cec12ef3e9c6f4c6e530a5d5fafdd9751e",
+    "backend/src/main/java/com/gaiprojects/quiz/speech/LoopbackTranscriber.java": "346bde992e50bd9958cae50bd510d3d51d43fa92618be38b308286e2d82deea8",
+    "backend/src/test/java/com/gaiprojects/quiz/speech/SpeechRulesTest.java": "e9d69816666ce59b9d954370f4ea669752f0f850e1a8962ae259ceb2301cc3b8",
+    "backend/src/test/java/com/gaiprojects/quiz/api/GameHttpFlowTest.java": "e8bb775a7326ea54fb550b66b0f1546ba69e73f4b701eea08451431b28a7a329",
+    "backend/src/test/java/com/gaiprojects/quiz/api/RealSpeechHttpIntegrationTest.java": "a767361579ff9452337d01cdf357e9e08be0337d791d8653c28ba785d2021e74",
+    "speech-worker/run_native_evaluation.py": "7622ad07fb30b38cf020e9ff1147568747fe59f1222c3a562774382e99ea88bd",
+    "speech-worker/private_asr.py": "0bb714c936b905af30af07a0e8e22100082663499778adcfdd3f965562b4683c",
+    "speech-worker/model-source-small.json": "609e3e1cb22563f2c77afed3c188b223835d20515e277f5cc064576110814fd3"
+  },
+  "fixturesSha256": {
+    "speech-worker/fixtures/synthetic-zh-third-option-v1/candidate.wav": "8c596cccf8bc00b8b6e7584a07bf03b0432cd47358d6f393e28c1c5f989f2f62",
+    "speech-worker/fixtures/synthetic-zh-answer-three-v1/candidate.wav": "fb28b52c51dbba1ede1423eb94a3792d3fe37ce9c97b0aca367bab6857c1b446"
+  }
+}

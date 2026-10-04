@@ -73,6 +73,55 @@ class SpeechRulesTest {
   }
 
   @Test
+  void completeTraditionalOrdinalsAndExplicitPrefixesRemainExactSuggestions() {
+    var options = List.of("Mars", "Saturn", "Earth", "Sun");
+    var numerals = List.of("一", "二", "三", "四");
+    for (int i = 0; i < 4; i++) {
+      for (String prefix : List.of("", "我選擇", "我選", "選擇", "選項", "選", "答案是", "我的答案是")) {
+        for (String suffix : List.of("項", "個")) {
+          assertEquals(
+              i,
+              ChoiceMatcher.suggest(
+                  prefix + "第" + numerals.get(i) + suffix + "。", options, Set.of()));
+        }
+      }
+    }
+    assertEquals(2, ChoiceMatcher.suggest("我選擇 C。", options, Set.of()));
+    assertEquals(2, ChoiceMatcher.suggest("我选择第三項。", options, Set.of()));
+  }
+
+  @Test
+  void traditionalNegationMultipleChoicesAndMisrecognizedThirteenStayUnmatched() {
+    for (String text :
+        List.of(
+            "C?",
+            "我選擇第三項？",
+            "第三項⁇",
+            "無選擇第三項",
+            "不選第三項",
+            "不要選第三項",
+            "我不選擇第三項",
+            "我選擇第三項嗎",
+            "可能選第三項",
+            "我選擇第三項或第四項",
+            "第三項/第四項",
+            "答案13",
+            "答案十三",
+            "我選擇第十三項",
+            "我選擇第三項然後第四項")) {
+      assertNull(
+          ChoiceMatcher.suggest(text, List.of("Mars", "Saturn", "Earth", "Sun"), Set.of()), text);
+    }
+  }
+
+  @Test
+  void traditionalLabelsStillRejectEliminatedAndCollidingOptions() {
+    assertNull(
+        ChoiceMatcher.suggest("我選擇第三項", List.of("Mars", "Saturn", "Earth", "Sun"), Set.of(2)));
+    assertNull(ChoiceMatcher.suggest("第三項", List.of("第三項", "Saturn", "Earth", "Sun"), Set.of()));
+  }
+
+  @Test
   void onlyExactLiteralLoopbackPrivatePathIsAllowed() {
     for (String url :
         Arrays.asList(

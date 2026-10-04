@@ -114,9 +114,9 @@ class RealSpeechHttpIntegrationTest {
       throw new IllegalArgumentException("Explicit supported fixture locale required");
     String profile = System.getenv().getOrDefault("QUIZ_REAL_ASR_MODEL_PROFILE", "tiny");
     assertTrue(Set.of("tiny", "small-2ec96c54").contains(profile));
-    // The tiny outputs were inaccurate; small must independently produce an actual candidate.
-    // These two actual model outputs were inaccurate. Keep them as safety regressions,
-    // never reinterpret their failed recognition as a successful Chinese candidate.
+    // Tiny remains an inaccurate-input safety control. Small's first exact Traditional command
+    // can be matched after B24; its second "答案13" output must still be rejected.
+    // One positive plus one safety negative is not two successful Chinese recognitions.
     return Stream.of("third-option", "answer-three")
         .map(
             id ->
@@ -124,7 +124,7 @@ class RealSpeechHttpIntegrationTest {
                     "zh-CN",
                     id,
                     Path.of("../speech-worker/fixtures/synthetic-zh-" + id + "-v1/candidate.wav"),
-                    profile.equals("tiny") ? null : 2));
+                    profile.equals("small-2ec96c54") && id.equals("third-option") ? 2 : null));
   }
 
   @ParameterizedTest(name = "{1}: unchanged game until explicit confirmation")
