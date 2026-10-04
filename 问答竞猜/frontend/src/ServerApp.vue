@@ -6,11 +6,12 @@ import {createStudioAudio} from './audio'
 import {createVoiceRecorder} from './voice-recorder'
 import {createNarrationPlayer} from './narration'
 import PlayerRecord from './PlayerRecord.vue'
+import ServerStage from './ServerStage.vue'
 import './style.css'
 const api=createQuizApi(),audio=createStudioAudio(),KEY='quiz.server.session.v1'
 const session=shallowRef(null),pending=shallowRef(null),fault=shallowRef(null),busy=ref(false),syncing=ref(false),locale=ref('zh-CN'),muted=ref(true),reduced=ref(false),wall=ref(Date.now()),offset=ref(0)
 const recordsOpen=ref(false),pageRoot=ref(null);let recordTrigger=null,pageSuspended=false
-let epoch=0,alive=true,timer,lastPoll=0,lastSoundRound=null,resumeId=null
+let epoch=0,alive=true,timer,lastPoll=0,lastSoundRound=null,resumeId=null,motionQuery
 const voiceState=ref('idle'),voiceConsent=ref(false),voiceCandidate=shallowRef(null),voiceChoice=ref(null),voiceFault=ref(null),voiceStarted=ref(0),voiceMax=ref(6000),voiceAttempts=ref(0)
 let voiceEpoch=0,recorder=null,voiceAbort=null
 const narrator=createNarrationPlayer(),narrationBusy=ref(false),narrationNotice=ref('')
@@ -84,11 +85,12 @@ async function restorePage(){if(!alive||!pageSuspended||document.hidden)return;c
 function showPage(event){if(!event.persisted&&!pageSuspended)return;if(!pageSuspended)hidePage();restorePage()}
 function visibility(){if(document.hidden){cancelVoice();narrator.cancel();}audio.enable(!pageSuspended&&!muted.value&&!document.hidden&&!['opening','recording'].includes(voiceState.value)).catch(()=>{});if(!document.hidden){if(pageSuspended)restorePage();else refresh()}}
 
-onMounted(()=>{reduced.value=matchMedia('(prefers-reduced-motion: reduce)').matches;try{const saved=JSON.parse(sessionStorage.getItem(KEY)||'null');if(saved&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(saved.sessionId)){resumeId=saved.sessionId;if(['en','zh-CN'].includes(saved.locale))locale.value=saved.locale;resume()}}catch{}window.addEventListener('keydown',keyboard);window.addEventListener('pagehide',hidePage);window.addEventListener('pageshow',showPage);document.addEventListener('visibilitychange',visibility);timer=setInterval(()=>{wall.value=Date.now();if(!document.hidden&&session.value&&!['FINISHED','ABANDONED'].includes(session.value.phase)&&Date.now()-lastPoll>=1000){lastPoll=Date.now();refresh()}},100)})
-onUnmounted(()=>{alive=false;narrator.cancel();cancelVoice();epoch++;clearInterval(timer);window.removeEventListener('keydown',keyboard);window.removeEventListener('pagehide',hidePage);window.removeEventListener('pageshow',showPage);document.removeEventListener('visibilitychange',visibility);audio.close()})
+function motionPreference(event){reduced.value=event.matches}
+onMounted(()=>{motionQuery=matchMedia('(prefers-reduced-motion: reduce)');reduced.value=motionQuery.matches;motionQuery.addEventListener?.('change',motionPreference);try{const saved=JSON.parse(sessionStorage.getItem(KEY)||'null');if(saved&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(saved.sessionId)){resumeId=saved.sessionId;if(['en','zh-CN'].includes(saved.locale))locale.value=saved.locale;resume()}}catch{}window.addEventListener('keydown',keyboard);window.addEventListener('pagehide',hidePage);window.addEventListener('pageshow',showPage);document.addEventListener('visibilitychange',visibility);timer=setInterval(()=>{wall.value=Date.now();if(!document.hidden&&session.value&&!['FINISHED','ABANDONED'].includes(session.value.phase)&&Date.now()-lastPoll>=1000){lastPoll=Date.now();refresh()}},100)})
+onUnmounted(()=>{motionQuery?.removeEventListener?.('change',motionPreference);alive=false;narrator.cancel();cancelVoice();epoch++;clearInterval(timer);window.removeEventListener('keydown',keyboard);window.removeEventListener('pagehide',hidePage);window.removeEventListener('pageshow',showPage);document.removeEventListener('visibilitychange',visibility);audio.close()})
 </script>
 <template>
-<div ref="pageRoot" class="studio server-studio" :class="{'quiet-motion':reduced}"><div class="beam beam-left"></div><div class="beam beam-right"></div><div class="floor"></div><div class="horizon"></div>
+<div ref="pageRoot" class="studio server-studio" :class="{'quiet-motion':reduced}"><ServerStage :phase="phase" :round-key="session?session.sessionId+':'+session.roundId:''" :outcome="revealed?(session.reveal.awarded>0?'correct':'learn'):''" :reduced="reduced"/><div class="beam beam-left"></div><div class="beam beam-right"></div><div class="floor"></div><div class="horizon"></div>
 <header class="topbar"><a class="brand" href="./index.html"><span class="brand-mark">Q<span>✦</span></span><span>环球挑战<small>QUIZ CHALLENGE</small></span></a><div class="studio-label"><span></span>SERVER MODE<em>API 1</em></div><nav><button @click="sound" :aria-pressed="!muted">{{muted?'♫ ×':'♫'}}<span class="nav-label">{{t(muted?'声音关':'声音开',muted?'SOUND OFF':'SOUND ON')}}</span></button><button @click="reduced=!reduced" :aria-pressed="reduced" :title="t('减少动画','Reduce motion')">✧</button></nav></header>
 <div class="demo-ribbon server-ribbon">{{t('服务器裁决 · 语音仍需确认 · 真实身份接入仍待完成','SERVER AUTHORITY · VOICE REQUIRES CONFIRMATION · IDENTITY INTEGRATION PENDING')}}</div>
 <main class="main-stage">

@@ -49,3 +49,12 @@ LOADING和ABANDONED的服务器快照不含题文、选项或答案解释；Read
 修复两个已在B17代码上失败的缓存返回用例：页面离开时先同步隐藏根节点，再清空游戏/战绩/语音与所有旧异步代次，只保留opaque恢复提示；pageshow缓存恢复或重新可见后先呈现空安全状态，再请求服务器current。旧响应、重复离开与隐藏页恢复不得越过这一边界。pagehide也会停止录音，不能依赖visibilitychange或Vue卸载一定先发生。
 
 背景：[浏览器BFCache说明](https://web.dev/articles/bfcache)、[pageshow事件](https://developer.mozilla.org/en-US/docs/Web/API/Window/pageshow_event)。本批使用真实HTTP和DOM事件交错测试；没有把事件模拟当作Safari/Chrome实际缓存或麦克风验收。
+
+
+## B19 舞台效果边界
+
+`ServerStage.vue` 是纯装饰。它只从父组件获得当前投影阶段、服务器回合标识和已确认的正误；无法调用游戏API、改分或改截止时间。待回答请求不会提前显示正确效果，认证失效回到入口色调。GSAP只变换背景光环/灯束/扩散圈，不动画隐藏文字或移动答题按钮。常规答案倒计时及音频授权继续由既有逻辑负责。
+
+同一阶段的重复快照不触发新演出，返回页面也不重放胜利效果。切阶段、隐藏、pagehide、减少动态与卸载会释放当前tween和RAF；ResizeObserver及系统动态偏好监听都在卸载解除。Canvas最多44粒子、约30fps，尺寸上限1920×1000且DPR/像素预算受限；无2D上下文时保留CSS背景。手机有独立拱架/光环布局；装饰aria-hidden且不接收指针，不改变键盘操作。
+
+DOM测试模拟帧、Canvas与媒体偏好，不能代替实际浏览器视觉/帧率/设备验收。默认生产身份仍安全关闭。
