@@ -1,5 +1,5 @@
 """SQLite task/approval/operation ledger. One action claim is atomic across workers."""
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 import sqlite3
 import time
@@ -102,14 +102,16 @@ class Kernel:
         return self.create_actions(goal, provider, plan, task_id)
 
     def create_actions(self, goal: str, provider: str, plan: list[Action], task_id: str | None = None,
-                       exclusive_parent: str | None = None) -> str:
+                       exclusive_parent: str | None = None, within_transaction: bool = False) -> str:
         """Trusted adapter entry: policy validation is still mandatory for every action."""
         task_id = task_id or uuid.uuid4().hex
         if not plan or len(plan) > 16:
             raise ValueError("plan must contain 1–16 bounded actions")
         for action in plan:
             self.files.validate(action)
-        with self.transaction():
+        if within_transaction and not self.db.in_transaction:
+            raise ValueError("caller transaction is required")
+        with (nullcontext() if within_transaction else self.transaction()):
             self.db.execute("INSERT INTO tasks(id,goal,provider,state,step,plan) VALUES(?,?,?,?,0,?)",
                             (task_id, goal, provider, State.READY,
                              canonical([action.to_dict() for action in plan])))

@@ -3,12 +3,13 @@
 ## 当前实现与未实现
 
 - 已实现：两种 fake 名称同一确定性计划、显式不可用时回退、structured_actions 能力检查、单次预估费用门控、配置安全校验、文件执行器和本地恢复
-- 未实现：真实模型 HTTP、流式输出、token/实际账单统计、累计预算预留、真实上下文窗协商、Codex 进程启动/协议解析、MCP 客户端和浏览器执行器；Windows 候选代码已实现，但未通过真实平台验收
-- `LiveProviderConfig.connect()` 明确抛 NotImplementedError，不会偷偷改用假模型。`cost_microusd` 只是测试合同的单次预估门控，不应宣传为实际费用控制
+- 新增：独立Chat Completions非流式HTTP窄子集、持久预算预留/usage报价结算/模型选择，详见[MODEL-HTTP](MODEL-HTTP.md)；只通过loopback fixture，真实厂商NOT_RUN
+- 未实现：真实厂商兼容验收、流式输出、实际供应商账单查询、准确tokenizer/上下文窗协商、Codex进程启动/协议解析、MCP客户端和浏览器执行器；Windows 候选代码已实现，但未通过真实平台验收
+- 旧`LiveProviderConfig.connect()`仍明确抛NotImplementedError；新增独立ChatConfig/ModelPlanner才是本轮HTTP实现，不会偷偷改用假模型。`cost_microusd` 只是测试合同的单次预估门控，不应宣传为实际费用控制
 
 ## 模型接入次序
 
-首个真实 adapter 选择用户有权限的一个服务或本地 Ollama/vLLM，再逐步覆盖其他供应商；本轮没有用户密钥，不进行计费调用。
+首个真实 adapter 选择用户有权限的一个服务或本地 Ollama/vLLM，再逐步覆盖其他供应商；本轮没有用户密钥，不进行计费调用。首个Chat HTTP候选已实现并仅用本机fixture验证，未完成真实服务验收。
 
 | Provider kind | 计划 wire / 接入策略 |
 | --- | --- |

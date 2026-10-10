@@ -33,6 +33,8 @@
 
 范围：先一个 provider，明确 wire/capabilities/context/usage，超时/限流/流中断、累计预算预留和结算、日志脱敏、跨 provider 仅显式摘要。禁止自动发起计费调用。
 
+进度：Chat Completions非流式HTTP、持久预算/usage未知阻断、显式模型选择及本机fixture已实现；真实厂商仍NOT_RUN。
+
 完成定义：离线 fixture 全通过；获授权后有限 live 测试，记录真实调用/费用与未知项。扩展其他 provider 必须逐项验证，不以 fake 通过冒充。
 
 ### ZX-008 / P1：Codex app-server stdio adapter

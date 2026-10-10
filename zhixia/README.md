@@ -10,10 +10,11 @@ Windows 优先、可换模型、可恢复任务的个人 Agent OS。**当前交�
 - 审批绑定任务/步骤/完整动作参数 hash/工作区/策略版本，有效期默认 5 分钟、一次性消费
 - 两个确定性 fake provider 的路由、能力/预算门控、故障回退合同测试
 - 候选 Notepad/UIA backend 与显式验收 CLI：两阶段审批、PID/HWND/进程创建时间绑定；Windows 真机仍 NOT_RUN
-- 七类真实模型接入的配置校验与设计；**尚未实现任何真实网络模型调用**
+- 首个非流式 Chat Completions HTTP adapter、持久预算/显式模型切换；**仅本机HTTP fixture验收，真实厂商调用NOT_RUN**
+- 其余厂商保持配置/接口合同，不宣称一个兼容类覆盖全部API
 - Codex、UFO、Playwright、Browser Use 的固定版本来源/许可筛查；不 fork、不复制其源码、不安装其运行时
 
-**没有完成：** Windows 真机记事本输入保存与 UIA 兼容验收、浏览器适配器、Codex app-server 实连、真实模型切换、长期记忆数据库、语音摄像头、多设备、商业租户。六类记忆目前只有类型和隔离/删除接口合同。模拟结果不能充当真机验收。
+**没有完成：** Windows 真机记事本输入保存与 UIA 兼容验收、浏览器适配器、Codex app-server 实连、真实厂商模型切换验收、长期记忆数据库、语音摄像头、多设备、商业租户。六类记忆目前只有类型和隔离/删除接口合同。模拟结果不能充当真机验收。
 
 ## 立即运行
 
@@ -65,6 +66,8 @@ python -m zhixia reconcile TASK_ID
 
 - [架构决策 ADR-001](docs/ADR-001.md)
 - [两阶段 Notepad 适配 ADR-002](docs/ADR-002.md)
+- [首个HTTP模型适配 ADR-003](docs/ADR-003.md)
+- [模型HTTP使用与预算边界](docs/MODEL-HTTP.md)
 - [Windows 可选依赖审计与安装候选](docs/WINDOWS-DEPENDENCIES.md)
 - [固定版本复用与许可证审计](docs/REUSE-AUDIT.md)
 - [Provider、工具与 app-server 接入规范](docs/ADAPTERS.md)

@@ -1,0 +1,17 @@
+{
+  "base_url": "https://api.example.invalid/v1",
+  "api_key_env": "ZHIXIA_MODEL_API_KEY",
+  "allowed_models": {
+    "configured-model-a": {"input_microusd_per_token": 1, "output_microusd_per_token": 1},
+    "configured-model-b": {"input_microusd_per_token": 1, "output_microusd_per_token": 2}
+  },
+  "default_model": "configured-model-a",
+  "total_budget_microusd": 0,
+  "input_token_reservation": 4096,
+  "max_completion_tokens": 1024,
+  "completion_limit_field": "max_completion_tokens",
+  "allow_loopback_http": false,
+  "timeout_seconds": 10,
+  "max_response_bytes": 262144,
+  "max_calls": 10
+}

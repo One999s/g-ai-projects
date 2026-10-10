@@ -4,7 +4,7 @@
 
 ## 已通过
 
-- `python -m unittest discover -s tests -v`：44 tests，全部通过，非零用例，无跳过
+- `python -m unittest discover -s tests -v`：72 tests，全部通过，非零用例，无跳过
 - `python -m compileall -q zhixia tests`：通过
 - `python -m zhixia --help`：通过
 - CLI 端到端：每条命令分别启动新进程，create(fake-b) → waiting_approval → approve → write → verify → succeeded；独立读取中文 UTF-8 文件确认逐字节一致
@@ -24,6 +24,14 @@
 - 复核修复：显式task/operation上下文取代全库hash反查；移除全局快捷键，注入焦点变化仍通过目标UIA pattern定向操作，未知菜单无键鼠fallback
 - 未安装pywinauto或其依赖；候选包哈希/元数据审计不等于Windows兼容验收
 
+## HTTP模型候选增量
+
+- 新增28项本机HTTP/预算/CLI测试，总计72项全部通过；fixture只绑定127.0.0.1，密钥/模型/usage都是合成数据
+- 验证真实HTTP请求字段、两种token参数显式互斥、schema/拒绝/截断/工具调用、usage缺失/非法/超预留、HTTP错误/redirect、输出上限和慢header期限
+- 两连接预算预留竞争、原子计划/结算回滚、取消前后、崩溃unknown保持占用、缺usage阻断新调用
+- 显式模型选择跨重启保持，旧待审批计划不变；只导出TaskSummary，无隐藏推理和凭据入库
+- 真实厂商、实际费用、TLS服务与Windows模型端到端仍NOT_RUN
+
 ## 复核中发现并修复
 
 独立只读安全复核发现：reconcile 在锁外读完证据前另一个连接 abandon，原 _complete 可能把 failed 改回 ready。现 _complete 在 BEGIN IMMEDIATE 事务内要求状态为 running/needs_reconciliation；abandon 同事务标 operation 为 abandoned。双连接竞争用例已纳入回归并通过。此处没有将同用户直接改 SQLite 视为受保护边界。
@@ -31,7 +39,7 @@
 ## 未运行 / 不声称完成
 
 - Windows 10/11 GUI、记事本、UIA、junction/reparse、NTFS、长路径、取消进程树、UAC 和真实 OS 沙箱
-- Codex app-server、MCP、真实 provider、累计预算和实际模型切换
+- Codex app-server、MCP、真实厂商provider/费用/模型切换验收（本机HTTP预算合同已测）
 - 长期记忆 CRUD/检索、语音摄像头、多设备、多租户
 - 电源故障目录持久性/文件系统竞争攻击测试、渗透测试、完整依赖安全审计
 - Windows 安装包构建/签名/安装/升级、远端自动 CI
