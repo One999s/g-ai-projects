@@ -4,7 +4,7 @@
 
 ## 已通过
 
-- `python -m unittest discover -s tests -v`：25 tests，全部通过，非零用例，无跳过
+- `python -m unittest discover -s tests -v`：44 tests，全部通过，非零用例，无跳过
 - `python -m compileall -q zhixia tests`：通过
 - `python -m zhixia --help`：通过
 - CLI 端到端：每条命令分别启动新进程，create(fake-b) → waiting_approval → approve → write → verify → succeeded；独立读取中文 UTF-8 文件确认逐字节一致
@@ -15,6 +15,14 @@
 - 文件：已有不同内容不覆盖；独立 verify 检出篡改；未知副作用保持待核对，不自动重复执行
 - Provider：fake fallback、显式摘要、预算门控、非预期错误不回退、endpoint 校验、live connect 明确未实现
 - 日志：测试验证原始异常私密文本不进入审计事件；没有 API key 写入路径。计划正文仍在数据库，用户不可放入秘密
+
+## Windows候选适配增量
+
+- 新增19项纯合同/平台阻断测试，总计44项；所有fake收据标contract_test、real_windows_acceptance=false
+- 两次独立审批、PID/文本变动失效、设备变化阻断、并发唯一父子任务、取消、不覆盖和GUI收据丢失不重放
+- Linux实跑 `python -m zhixia.notepad_cli check` 返回BLOCKED / windows_acceptance=NOT_RUN，退出码2
+- 复核修复：显式task/operation上下文取代全库hash反查；移除全局快捷键，注入焦点变化仍通过目标UIA pattern定向操作，未知菜单无键鼠fallback
+- 未安装pywinauto或其依赖；候选包哈希/元数据审计不等于Windows兼容验收
 
 ## 复核中发现并修复
 

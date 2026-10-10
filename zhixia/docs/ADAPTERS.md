@@ -3,7 +3,7 @@
 ## 当前实现与未实现
 
 - 已实现：两种 fake 名称同一确定性计划、显式不可用时回退、structured_actions 能力检查、单次预估费用门控、配置安全校验、文件执行器和本地恢复
-- 未实现：真实模型 HTTP、流式输出、token/实际账单统计、累计预算预留、真实上下文窗协商、Codex 进程启动/协议解析、MCP 客户端、Windows 和浏览器执行器
+- 未实现：真实模型 HTTP、流式输出、token/实际账单统计、累计预算预留、真实上下文窗协商、Codex 进程启动/协议解析、MCP 客户端和浏览器执行器；Windows 候选代码已实现，但未通过真实平台验收
 - `LiveProviderConfig.connect()` 明确抛 NotImplementedError，不会偷偷改用假模型。`cost_microusd` 只是测试合同的单次预估门控，不应宣传为实际费用控制
 
 ## 模型接入次序
@@ -47,6 +47,8 @@
 Phase0 没有 app-server adapter 可执行代码，以免一个空壳被误认为实连完成。上述接入设计与固定源码已可用于首批 Issue 验收。
 
 ## Windows / 浏览器执行器
+
+Windows 候选代码已实现，使用原Kernel账本；当前只做离线合同测试，不代表真实GUI通过。两阶段命令及保守限制见 [ADR-002](ADR-002.md)。浏览器仍未实现。
 
 每次只接受一个经过策略的动作，参数包括 task_id、operation_id、device_id、adapter/version、目标进程/窗口、内容 hash、路径、最大时长及批准 token。业务验证独立于执行器自报成功。
 

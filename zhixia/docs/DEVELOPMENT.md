@@ -6,7 +6,7 @@
 - 小步普通提交；提交前 `git diff --check`、unittest、CLI smoke；推送后核远端 SHA。禁止强推
 - 保留成熟组件原始边界，依赖新增必须有固定版本/来源/许可、必要锁文件与安全验收，不为测试便利引入未知软件
 - Python 3.11+；标准库优先、类型标注、结构化异常；不要捕获失败后返回假成功
-- 不提交数据库、.env、密钥、个人数据、node_modules、模型缓存、录音或备份。当前没有外部 runtime dependencies，无需伪造锁文件
+- 不提交数据库、.env、密钥、个人数据、node_modules、模型缓存、录音或备份。核心没有外部 runtime dependencies；可选Windows候选组合须使用独立固定版本/哈希文件，不混入核心依赖
 
 ## 必须保持的不变量
 

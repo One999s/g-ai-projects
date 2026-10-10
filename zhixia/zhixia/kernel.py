@@ -4,7 +4,7 @@ from pathlib import Path
 import sqlite3
 import time
 import uuid
-from .contracts import Action, State, TaskSummary, canonical, digest
+from .contracts import Action, ExecutionContext, State, TaskSummary, canonical, digest
 from .providers import Router
 from .tools import WorkspaceFiles
 
@@ -13,8 +13,9 @@ TERMINAL = {State.SUCCEEDED, State.FAILED, State.CANCELLED}
 
 
 class Kernel:
-    def __init__(self, database: Path, workspace: Path, clock=time.time):
-        self.files = WorkspaceFiles(workspace)
+    def __init__(self, database: Path, workspace: Path, clock=time.time, adapter=None):
+        self.files = adapter if adapter is not None else WorkspaceFiles(workspace)
+        self.policy_version = getattr(self.files, "policy_version", POLICY_VERSION)
         database.parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(database, timeout=10, isolation_level=None)
         self.db.row_factory = sqlite3.Row
@@ -38,6 +39,9 @@ class Kernel:
                 policy_version TEXT NOT NULL, approval_id TEXT,
                 idempotency_key TEXT NOT NULL UNIQUE, status TEXT NOT NULL,
                 receipt TEXT, UNIQUE(task_id,step));
+            CREATE TABLE IF NOT EXISTS task_children(
+                parent_task_id TEXT PRIMARY KEY REFERENCES tasks(id),
+                child_task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id));
             CREATE TABLE IF NOT EXISTS events(
                 seq INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL,
                 at REAL NOT NULL, kind TEXT NOT NULL, detail TEXT NOT NULL);
@@ -48,6 +52,11 @@ class Kernel:
             if row and row[0] != scope:
                 raise ValueError("database belongs to another workspace")
             self.db.execute("INSERT OR IGNORE INTO meta VALUES('workspace',?)", (scope,))
+            adapter_id = getattr(self.files, "adapter_id", "workspace-files")
+            existing = self.db.execute("SELECT value FROM meta WHERE key='adapter_id'").fetchone()
+            if existing and existing[0] != adapter_id:
+                raise ValueError("database belongs to another execution adapter")
+            self.db.execute("INSERT OR IGNORE INTO meta VALUES('adapter_id',?)", (adapter_id,))
             self.db.execute("INSERT OR IGNORE INTO meta VALUES('schema_version','1')")
             if self.db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] != "1":
                 raise ValueError("unsupported schema version")
@@ -90,6 +99,12 @@ class Kernel:
         goal = "在工作区创建文本并逐字节验证"
         summary = TaskSummary(task_id, goal, State.READY, 0, 0)
         provider, plan = router.plan(summary, target, text)
+        return self.create_actions(goal, provider, plan, task_id)
+
+    def create_actions(self, goal: str, provider: str, plan: list[Action], task_id: str | None = None,
+                       exclusive_parent: str | None = None) -> str:
+        """Trusted adapter entry: policy validation is still mandatory for every action."""
+        task_id = task_id or uuid.uuid4().hex
         if not plan or len(plan) > 16:
             raise ValueError("plan must contain 1–16 bounded actions")
         for action in plan:
@@ -98,13 +113,15 @@ class Kernel:
             self.db.execute("INSERT INTO tasks(id,goal,provider,state,step,plan) VALUES(?,?,?,?,0,?)",
                             (task_id, goal, provider, State.READY,
                              canonical([action.to_dict() for action in plan])))
+            if exclusive_parent is not None:
+                self.db.execute("INSERT INTO task_children VALUES(?,?)", (exclusive_parent, task_id))
             self.event(task_id, "created", {"provider": provider, "plan_hash": digest([a.to_dict() for a in plan])})
         return task_id
 
     def binding(self, task: dict, action: Action) -> str:
         return digest({"task_id": task["id"], "step": task["step"],
                        "action": action.to_dict(), "workspace": str(self.files.workspace),
-                       "policy_version": POLICY_VERSION})
+                       "policy_version": self.policy_version})
 
     def pending(self, task_id: str) -> list[dict]:
         return [dict(row) for row in self.db.execute(
@@ -148,7 +165,8 @@ class Kernel:
             action = Action(**task["plan"][task["step"]])
             self.files.validate(action)
             approval_id = None
-            if action.tool == "file.write":
+            requires_approval = getattr(self.files, "requires_approval", lambda a: a.tool == "file.write")
+            if requires_approval(action):
                 binding = self.binding(task, action)
                 row = self.db.execute('''SELECT * FROM approvals WHERE task_id=? AND step=?
                     AND binding=? AND consumed=0 AND expires>? AND decision IN ('approved','pending')
@@ -166,13 +184,15 @@ class Kernel:
                 self.db.execute("UPDATE approvals SET consumed=1 WHERE id=?", (approval_id,))
             operation_id = uuid.uuid4().hex
             self.db.execute("INSERT INTO operations VALUES(?,?,?,?,?,?,?,?,NULL)",
-                            (operation_id, task_id, task["step"], digest(action.to_dict()), POLICY_VERSION,
+                            (operation_id, task_id, task["step"], digest(action.to_dict()), self.policy_version,
                              approval_id, f"{task_id}:{task['step']}", "running"))
             self.db.execute("UPDATE tasks SET state=? WHERE id=?", (State.RUNNING, task_id))
             self.event(task_id, "execution_intent", {"operation_id": operation_id, "tool": action.tool})
         # Durable intent precedes side effect. A hard crash here must not cause automatic replay.
         try:
-            receipt = self.files.execute(action)
+            claimed_executor = getattr(self.files, "execute_claimed", None)
+            receipt = (claimed_executor(action, ExecutionContext(task_id, operation_id))
+                       if claimed_executor else self.files.execute(action))
         except Exception as error:
             with self.transaction():
                 self.db.execute("UPDATE operations SET status='unknown' WHERE id=?", (operation_id,))
@@ -194,7 +214,8 @@ class Kernel:
                 State.SUCCEEDED if next_step == len(task["plan"]) else State.READY)
             self.db.execute("UPDATE operations SET status='succeeded',receipt=? WHERE id=?", (canonical(receipt), operation_id))
             self.db.execute("UPDATE tasks SET step=?,state=? WHERE id=?", (next_step, state, task_id))
-            self.event(task_id, "verified", {"operation_id": operation_id, "receipt": receipt})
+            self.event(task_id, "verified" if receipt.get("verified") else "executed",
+                       {"operation_id": operation_id, "receipt": receipt})
             return state
 
     def recover(self, task_id: str) -> str:
@@ -213,7 +234,7 @@ class Kernel:
             raise ValueError("task is not awaiting reconciliation")
         operation = self.db.execute("SELECT * FROM operations WHERE task_id=? AND step=?", (task_id, task["step"])).fetchone()
         action = Action(**task["plan"][task["step"]])
-        if operation["arguments_hash"] != digest(action.to_dict()) or operation["policy_version"] != POLICY_VERSION:
+        if operation["arguments_hash"] != digest(action.to_dict()) or operation["policy_version"] != self.policy_version:
             raise ValueError("checkpoint no longer matches action/policy")
         receipt = self.files.reconcile(action)  # Read only; no repeat of the write.
         if receipt is None:

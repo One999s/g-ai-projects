@@ -23,7 +23,7 @@
 1. 固定 API 启动授权 Notepad，确认新进程/目标窗口身份；发现提权/权限提示或无法区分既有窗口即停
 2. 读取真实 UIA tree，唯一定位编辑控件，使用合适的 Value/Edit 模式输入；旧版标题/控件名不可直接套新版 Win11
 3. 输入前再核对焦点/进程/窗口，核对输入后内容；歧义、焦点变化、超时即停，禁止盲目全局粘贴
-4. 受控 Ctrl+S / UIA 保存对话框，填写授权路径，拒绝覆盖提示、扩展变更和目录逃逸
+4. 绑定窗口的 UIA 菜单 Invoke / 保存对话框，填写授权路径，拒绝覆盖提示、扩展变更和目录逃逸
 5. 执行器返回后，独立 verifier 只读落盘文件：核对实际规范化路径、普通文件、非 reparse/link、字节/编码/换行合同、sha256、时间和本次 operation 关联
 6. 写入 SQLite receipt 后才能宣布 verified；截图/日志属于辅助证据，不代替文件校验
 7. 进程/网络/窗口出错或中断后，标记 unknown / needs_reconciliation，先查证，不自动重放 GUI 保存。取消不等于撤销
@@ -42,3 +42,52 @@
 | 摄像头/麦克风默认拒绝 | NOT_RUN | 无设备访问或隐式授权 |
 
 Phase0 Linux 单元测试只证明文件策略、SQLite 账本和恢复合同。不得将这份表改成 PASS，除非附真实 Windows 版本、运行记录及内容证据。
+
+## 候选实现后的显式真机命令
+
+当前已有可插拔候选代码，仍没有Windows实测。该实现限定经典单空白Edit控件Notepad；tabbed/packaged重宿主进程、未知菜单树/对话框、缺Value/Invoke/ExpandCollapse pattern均停止，不会降级全局键鼠。
+
+先按[依赖说明](WINDOWS-DEPENDENCIES.md)在获授权的Windows CPython3.11 x64隔离环境安装候选包。以下示例假定激活该venv，在项目`zhixia/`下执行；Linux执行check只会返回BLOCKED。
+
+```powershell
+python -m zhixia.notepad_cli check
+python -m zhixia.notepad_cli prepare-launch --path hello.txt --text "你好，知夏" --file-menu "File" --save-as-menu "Save As..." --save-dialog-title "Save As"
+```
+
+菜单名必须与目标机器实际UIA树精确一致；英文参数不适用于中文机器。中文候选可明确使用`文件(F)`/`另存为(A)...`/`另存为`，但没有匹配就阻断，不做模糊选择。不得仅凭这些示例声称目标树已验证；真机首测需记录实际UIA树/版本。
+
+第一阶段仅启动。将返回值替换LAUNCH_TASK：
+
+```powershell
+python -m zhixia.notepad_cli run LAUNCH_TASK --enable-uia
+python -m zhixia.notepad_cli show LAUNCH_TASK
+python -m zhixia.notepad_cli approve LAUNCH_APPROVAL_ID
+python -m zhixia.notepad_cli run LAUNCH_TASK --enable-uia
+python -m zhixia.notepad_cli show LAUNCH_TASK
+```
+
+首次run只产生审批；核对完整提案后，approve批准启动，第二次run才启动。启动收据必须有真实PID/HWND/进程创建时间、系统Notepad exe、设备及adapter版本。第二阶段另建输入任务，不复用启动审批：
+
+```powershell
+python -m zhixia.notepad_cli prepare-input LAUNCH_TASK
+python -m zhixia.notepad_cli run INPUT_TASK --enable-uia
+python -m zhixia.notepad_cli show INPUT_TASK
+python -m zhixia.notepad_cli approve INPUT_APPROVAL_ID
+python -m zhixia.notepad_cli run INPUT_TASK --enable-uia
+python -m zhixia.notepad_cli run INPUT_TASK --enable-uia
+python -m zhixia.notepad_cli show INPUT_TASK
+```
+
+第二阶段审批绑定窗口/PID/进程创建时间、完整输入、保存路径、设备、adapter版本、精确菜单/对话框标签、禁止覆盖及UTF-8编码。首次执行仅走UIA Value.SetValue → 定向File菜单Expand → 定向Save As Invoke → 绑定所有者的Save As对话框Value/Invoke，不使用Ctrl+S、全局键鼠、剪贴板或菜单模糊匹配。后一次run独立读取落盘文件，需同时存在durable UIA调用收据，才产生带`real_windows_acceptance=true`的验收证据。
+
+保存目标为`.runtime/notepad/workspace/hello.txt`，必须事先不存在。子目录须由操作员事先准备；已有文件、焦点/控件异常、UTF-8字节不符均不报成功。只读恢复可以检查文件，但GUI动作收据丢失时文件本身不能证明UIA链路，仍留待人工核查。
+
+取消/未知结果处理：
+
+```powershell
+python -m zhixia.notepad_cli cancel INPUT_TASK
+python -m zhixia.notepad_cli recover INPUT_TASK --worker-stopped
+python -m zhixia.notepad_cli reconcile INPUT_TASK
+```
+
+recover只在确认旧worker退出后运行。不会自动关闭记事本、清除文本、覆写文件或重放GUI动作；放弃用abandon，残留副作用仍由操作员核查。测试用注入backend收据明确标contract_test，不允许作为真机PASS。

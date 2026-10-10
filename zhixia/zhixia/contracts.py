@@ -53,6 +53,12 @@ class TaskSummary:
 
 
 @dataclass(frozen=True)
+class ExecutionContext:
+    task_id: str
+    operation_id: str
+
+
+@dataclass(frozen=True)
 class Capabilities:
     structured_actions: bool = True
     vision: bool = False

@@ -6,3 +6,6 @@ build/
 dist/
 .venv/
 __pycache__/
+
+# Optional Windows acceptance environment
+.venv-uia/

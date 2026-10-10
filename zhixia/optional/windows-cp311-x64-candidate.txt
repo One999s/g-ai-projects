@@ -1,0 +1,8 @@
+# Candidate only: artifacts/metadata audited, combined Windows runtime NOT_RUN.
+# CPython 3.11 x64, Windows. Other Python ABIs/architectures intentionally unsupported.
+--only-binary=:all:
+--require-hashes
+pywinauto==0.6.8 ; sys_platform == "win32" --hash=sha256:931ce622d7f402b1892ab472987a1332e4c0681bf87e106f798390d16ca95e58
+six==1.16.0 ; sys_platform == "win32" --hash=sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254
+comtypes==1.2.0 ; sys_platform == "win32" --hash=sha256:26f261b1eed6972d5cdaa3af1fadb3fa76fc59877d0a1293835327a76573380d
+pywin32==306 ; sys_platform == "win32" --hash=sha256:a7639f51c184c0272e93f244eb24dafca9b1855707d94c192d4a0b4c01e1100e

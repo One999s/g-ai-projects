@@ -1,5 +1,6 @@
 """Each command runs in a new process, exercising persisted state end to end."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -12,7 +13,8 @@ class CLITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             def run(*args):
                 process = subprocess.run([sys.executable, '-m', 'zhixia', '--home', directory, *args],
-                                         capture_output=True, text=True, encoding='utf-8', check=True)
+                                         capture_output=True, text=True, encoding='utf-8', check=True,
+                                         env={**os.environ, 'PYTHONIOENCODING': 'utf-8'})
                 return json.loads(process.stdout)
             created = run('create', '--path', 'hello.txt', '--text', '你好，知夏', '--provider', 'fake-b')
             self.assertEqual(created['provider_mode'], 'deterministic_fake_no_model_call')

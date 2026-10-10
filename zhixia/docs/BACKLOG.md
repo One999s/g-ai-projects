@@ -17,7 +17,7 @@
 
 范围：普通用户启动指定 Notepad、精确 UIA 控件定位、中文输入、受控保存、独立文件 verifier、durable receipt。默认不授予完整桌面、摄像头或麦克风，不绕 UAC。
 
-完成定义：WINDOWS-ACCEPTANCE 中适用的正向/中断/焦点/路径/冲突用例有真实版本和证据。不能用 file.write 或 mock 替代。当前 BLOCKED/NOT_RUN。
+完成定义：WINDOWS-ACCEPTANCE 中适用的正向/中断/焦点/路径/冲突用例有真实版本和证据。不能用 file.write 或 mock 替代。候选adapter/两阶段审批CLI及离线合同测试已完成；真实Windows验收仍 BLOCKED/NOT_RUN。
 
 ### ZX-006 / P0：本地执行 broker 与 Windows 路径/权限边界
 
