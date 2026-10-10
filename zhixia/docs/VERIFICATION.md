@@ -50,3 +50,11 @@
 ## 复现
 
 从仓库 `zhixia/` 运行上述三条检查。测试目录均使用临时目录自动清理，运行状态不进 Git。其他平台的适用结果必须另行记录，不能直接复制本记录的 PASS。
+
+## 本批最终独立复核（2026-10-10 UTC）
+
+修复后独立只读复核重跑原 model mismatch loopback 探针：首调用 response_model_mismatch，第二调用在发送前以 unresolved_cost 阻断；fixture 实际请求数为 1，financial_uncertainty=True，预留 6144，charged=NULL，usage 100/30 作为未核验事实保留。复核确认本批已复现问题关闭，74/74 unittest 通过；此结论仅覆盖本候选范围。
+
+HTTP loopback 使用真实本地网络传输和合成响应，并不证明真实模型任务成功。真实厂商、实际费用和真实 Windows 端到端仍为 NOT_RUN。当前凭据检测仅针对运行时当前 API key 的已知字符串（包括 JSON 解码后的字符串）；不是全面秘密识别或防泄露系统，不能识别所有其他凭据、变形/编码秘密或敏感任务内容。操作者仍须审查将发送的正文。
+
+收尾检查：本批测试进程及本地 HTTP fixture 已退出；未发现遗留 zhixia/unittest/test_chat/http.server 进程。文档收尾后执行普通提交、远端内容读回与工作区 clean 检查，不扩展验收范围。
