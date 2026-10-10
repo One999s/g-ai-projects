@@ -21,7 +21,7 @@
 
 配置只保存 provider kind、model、endpoint、api_key_env 名称。实际凭据从运行进程环境读取，不写 SQLite、不进异常日志、不随摘要传出。校验拒绝 endpoint userinfo/query/fragment 和非本地 HTTP；这仍不是通用 SSRF 防护，真实联网前另需明确 endpoint 授权、重定向策略、DNS/私网过滤、超时/请求体限制。
 
-### 真实调用必须先补的合同
+### 真实调用接入合同（部分已由HTTP候选实现，实服仍待验）
 
 1. 将 model、tool schema、结构化输出、vision、context window、最大输出、计费单位/价格来源显式协商；不以供应商品牌猜能力
 2. 预留累计预算/调用上限，执行前拦截，结束回写真实 usage；失败/取消/流断成本仍需处理，不能把“未收到回答”当零花费

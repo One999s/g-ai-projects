@@ -71,7 +71,7 @@ python -m zhixia.model_cli --config public-config.json recover CALL_ID --worker-
 python -m zhixia.model_cli --config public-config.json status
 ```
 
-recover只在旧worker已停止时使用。发送后结果未知时，完整预留继续占用并阻断新调用；不自动重试、不自动换模型、不捏造0 token。缺usage可保留已生成的待审批计划，但财务状态仍unknown。已知usage即使输出被拒绝也记账；超预留实际报告不截断，阻断后续调用。费用字段按配置报价计算，不是供应商账单凭证。
+recover只在旧worker已停止时使用。发送后结果未知时，完整预留继续占用并阻断新调用；不自动重试、不自动换模型、不捏造0 token。缺usage可保留已生成的待审批计划，但财务状态仍unknown。已知且模型身份匹配的usage即使输出被拒绝也按配置报价记账；响应model不匹配时保留未核验usage但不套错模型价格，费用unknown，完整预留继续占用且阻断后续调用。超任一token上限或总预留的报告不截断，阻断后续调用。费用字段按配置报价计算，不是供应商账单凭证。
 
 现无自动账单查询或解除未知费用的CLI，需后续凭实际供应商证据实现明确核对。不能通过删除账本/换home来声称原调用没有成本。当前账本是单用户本地策略，不是对恶意OS用户的计费或多租户强隔离。
 

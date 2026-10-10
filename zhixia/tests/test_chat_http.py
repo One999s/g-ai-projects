@@ -37,6 +37,7 @@ class Fixture:
             def log_message(self, *args):
                 pass
             def do_POST(self):
+                self.close_connection = True
                 data = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
                 fixture.requests.append({'path': self.path, 'body': data, 'authorization': self.headers.get('Authorization')})
                 fixture.after_request()
@@ -57,6 +58,7 @@ class Fixture:
                 raw = fixture.raw if fixture.raw is not None else json.dumps(fixture.mutate(payload)).encode()
                 try:
                     self.send_response(fixture.status)
+                    self.send_header('Connection', 'close')
                     self.send_header('Content-Type', fixture.content_type)
                     self.send_header('Content-Length', str(len(raw)))
                     if 300 <= fixture.status < 400:
@@ -256,6 +258,36 @@ class ChatTests(unittest.TestCase):
         self.assertEqual(status['accounted_or_reserved_microusd'], 6144)
         self.assertEqual(self.kernel.task(task)['state'], State.READY)
         with self.assertRaisesRegex(BudgetError, 'unresolved_cost'):
+            self.planner.plan_task('again.txt', 'again')
+        self.assertEqual(len(self.fixture.requests), 1)
+
+    def test_model_mismatch_keeps_unverified_usage_and_full_reservation(self):
+        self.fixture.mutate = lambda payload: {**payload, 'model': 'unquoted-different-model'}
+        with self.assertRaisesRegex(ProviderError, 'response_model_mismatch'):
+            self.planner.plan_task('first.txt', 'first')
+        status = self.planner.status()
+        self.assertTrue(status['financial_uncertainty'])
+        self.assertEqual(status['accounted_or_reserved_microusd'], 6144)
+        call = status['calls'][0]
+        self.assertEqual(call['prompt_tokens'], 100)
+        self.assertEqual(call['completion_tokens'], 30)
+        self.assertIsNone(call['charged_microusd'])
+        self.assertEqual(call['financial_state'], 'unknown')
+        with self.assertRaisesRegex(BudgetError, 'unresolved_cost'):
+            self.planner.plan_task('second.txt', 'second')
+        self.assertEqual(len(self.fixture.requests), 1)
+        self.assertEqual(self.kernel.db.execute('SELECT count(*) FROM tasks').fetchone()[0], 0)
+
+    def test_token_ceiling_violation_blocks_even_below_total_reservation(self):
+        def mutate(payload):
+            payload['usage'] = {'prompt_tokens': 0, 'completion_tokens': 1025, 'total_tokens': 1025}
+            return payload
+        self.fixture.mutate = mutate
+        self.planner.plan_task('note.txt', 'text')
+        status = self.planner.status()
+        self.assertEqual(status['accounted_or_reserved_microusd'], 2050)
+        self.assertTrue(status['reservation_policy_violation'])
+        with self.assertRaisesRegex(BudgetError, 'reservation_policy_violation'):
             self.planner.plan_task('again.txt', 'again')
         self.assertEqual(len(self.fixture.requests), 1)
 

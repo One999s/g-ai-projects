@@ -141,23 +141,27 @@ class ModelPlanner:
             return call_id, planned_task_id
         except ProviderError as error:
             self._settle(call_id, 'rejected' if error.usage else ('unknown' if error.sent else 'failed_before_send'),
-                         error.usage, sent=error.sent, error_code=error.code)
+                         error.usage, sent=error.sent, error_code=error.code,
+                         quote_verified=error.code != 'response_model_mismatch')
             raise
         except Exception:
             # The request may have completed; no automatic retry, even if persistence later failed.
             self._settle(call_id, 'unknown', None, sent=True, error_code='planning_interrupted')
             raise ProviderError('planning_interrupted', sent=True) from None
 
-    def _settle(self, call_id: str, state: str, usage: Usage | None, *, sent: bool, error_code: str | None = None, within_transaction: bool = False):
+    def _settle(self, call_id: str, state: str, usage: Usage | None, *, sent: bool, error_code: str | None = None, within_transaction: bool = False,
+                quote_verified: bool = True):
         if within_transaction and not self.kernel.db.in_transaction:
             raise BudgetError("caller_transaction_required")
         with (nullcontext() if within_transaction else self.kernel.transaction()):
             row = self.kernel.db.execute('SELECT * FROM model_calls WHERE id=?', (call_id,)).fetchone()
             if row['state'] != 'running':
                 raise BudgetError('model_call_no_longer_settleable')
-            charged = (usage.prompt_tokens * row['input_rate'] + usage.completion_tokens * row['output_rate']) if usage else (None if sent else 0)
-            financial_state = 'usage_reported' if usage else ('unknown' if sent else 'not_sent')
-            if usage and charged > row['reserved_microusd']:
+            charged = (usage.prompt_tokens * row['input_rate'] + usage.completion_tokens * row['output_rate']) if usage and quote_verified else (None if sent else 0)
+            financial_state = 'usage_reported' if usage and quote_verified else ('unknown' if sent else 'not_sent')
+            if usage and quote_verified and (charged > row['reserved_microusd']
+                    or usage.prompt_tokens > self.config.input_token_reservation
+                    or usage.completion_tokens > self.config.max_completion_tokens):
                 financial_state = 'usage_exceeds_reservation'
             self.kernel.db.execute('''UPDATE model_calls SET state=?,financial_state=?,charged_microusd=?,
                 prompt_tokens=?,completion_tokens=?,error_code=? WHERE id=?''',

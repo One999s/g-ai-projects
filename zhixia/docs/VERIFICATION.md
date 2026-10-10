@@ -4,7 +4,7 @@
 
 ## 已通过
 
-- `python -m unittest discover -s tests -v`：72 tests，全部通过，非零用例，无跳过
+- `python -m unittest discover -s tests -v`：74 tests，全部通过，非零用例，无跳过
 - `python -m compileall -q zhixia tests`：通过
 - `python -m zhixia --help`：通过
 - CLI 端到端：每条命令分别启动新进程，create(fake-b) → waiting_approval → approve → write → verify → succeeded；独立读取中文 UTF-8 文件确认逐字节一致
@@ -26,9 +26,10 @@
 
 ## HTTP模型候选增量
 
-- 新增28项本机HTTP/预算/CLI测试，总计72项全部通过；fixture只绑定127.0.0.1，密钥/模型/usage都是合成数据
+- 新增30项本机HTTP/预算/CLI测试，总计74项全部通过；fixture只绑定127.0.0.1，密钥/模型/usage都是合成数据
 - 验证真实HTTP请求字段、两种token参数显式互斥、schema/拒绝/截断/工具调用、usage缺失/非法/超预留、HTTP错误/redirect、输出上限和慢header期限
 - 两连接预算预留竞争、原子计划/结算回滚、取消前后、崩溃unknown保持占用、缺usage阻断新调用
+- 复核修复：响应model不匹配保留未核验usage、占用全额预留且第二次调用零网络；单项token超限即使总报价未超预留也阻断
 - 显式模型选择跨重启保持，旧待审批计划不变；只导出TaskSummary，无隐藏推理和凭据入库
 - 真实厂商、实际费用、TLS服务与Windows模型端到端仍NOT_RUN
 
