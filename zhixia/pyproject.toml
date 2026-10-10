@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zhixia-agentos"
+version = "0.0.1"
+description = "知夏 AgentOS Phase0: 可恢复、审批驱动的轻内核"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+zhixia = "zhixia.cli:main"
+
+[tool.setuptools]
+packages = ["zhixia"]
